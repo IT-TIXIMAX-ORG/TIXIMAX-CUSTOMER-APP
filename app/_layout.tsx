@@ -1,56 +1,142 @@
-import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
+// Root Layout - App entry point with providers.
+
 import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import {
+  Geist_400Regular,
+  Geist_500Medium,
+  Geist_600SemiBold,
+  Geist_700Bold,
+  Geist_800ExtraBold,
+  Geist_900Black,
+  useFonts,
+} from '@expo-google-fonts/geist';
+import { PaperProvider } from 'react-native-paper';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
+import { ActivityIndicator, Text, TextInput, View } from 'react-native';
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { paperTheme } from '@/src/theme/paper-theme';
+import { useAuthStore } from '@/src/features/auth/stores/auth.store';
+import { colors, typography, fontFamilyForWeight } from '@/src/theme/tokens';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 2 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+let isDefaultFontConfigured = false;
+
+const configureDefaultFont = () => {
+  if (isDefaultFontConfigured) return;
+
+  const defaultTextStyle = { fontFamily: typography.fontFamily.regular };
+  const defaultText = Text as typeof Text & { defaultProps?: { style?: unknown } };
+  const defaultTextInput = TextInput as typeof TextInput & { defaultProps?: { style?: unknown } };
+
+  defaultText.defaultProps = defaultText.defaultProps ?? {};
+  defaultText.defaultProps.style = [defaultTextStyle, defaultText.defaultProps.style].filter(Boolean);
+
+  defaultTextInput.defaultProps = defaultTextInput.defaultProps ?? {};
+  defaultTextInput.defaultProps.style = [
+    defaultTextStyle,
+    defaultTextInput.defaultProps.style,
+  ].filter(Boolean);
+
+  isDefaultFontConfigured = true;
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+function AppContent() {
+  const hydrate = useAuthStore((s) => s.hydrate);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+    void hydrate();
+  }, [hydrate]);
 
-  if (!loaded) {
-    return null;
+  if (!isHydrated) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: colors.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
   }
 
-  return <RootLayoutNav />;
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="orders/[id]"
+          options={{
+            headerShown: true,
+            title: 'Chi tiết đơn hàng',
+            headerStyle: { backgroundColor: colors.surface },
+            headerTintColor: colors.textPrimary,
+            headerTitleStyle: {
+              fontWeight: '800',
+              fontFamily: fontFamilyForWeight('800'),
+              fontSize: 16,
+            },
+          }}
+        />
+      </Stack>
+      <StatusBar style="dark" />
+      <Toast />
+    </>
+  );
 }
 
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Geist_400Regular,
+    Geist_500Medium,
+    Geist_600SemiBold,
+    Geist_700Bold,
+    Geist_800ExtraBold,
+    Geist_900Black,
+  });
+
+  if (fontError) {
+    throw fontError;
+  }
+
+  if (!fontsLoaded) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: colors.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  configureDefaultFont();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <PaperProvider theme={paperTheme}>
+        <AppContent />
+      </PaperProvider>
+    </QueryClientProvider>
   );
 }

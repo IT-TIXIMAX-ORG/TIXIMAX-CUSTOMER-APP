@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import EditScreenInfo from '@/components/EditScreenInfo';
 import { Text, View } from '@/components/Themed';
+import { fontFamilyForWeight } from '@/src/theme/tokens';
 
 export default function TabTwoScreen() {
   return (
@@ -22,6 +23,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
+    fontFamily: fontFamilyForWeight('bold'),
   },
   separator: {
     marginVertical: 30,

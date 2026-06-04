@@ -1,0 +1,8 @@
+env: load .env
+env: export EXPO_PUBLIC_API_BASE_URL EXPO_PUBLIC_DEV_SERVER_PORT PORT RCT_METRO_PORT
+Starting project at D:\Tiximax_FE\tiximax-customer-app
+Starting Metro Bundler
+
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:5174
+Logs for your project will appear below.
