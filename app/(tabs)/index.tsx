@@ -15,10 +15,12 @@ import { StaffCard } from '@/src/components/dashboard/StaffCard';
 import { ActiveOrderCard } from '@/src/components/dashboard/ActiveOrderCard';
 import { TransactionItem } from '@/src/components/dashboard/TransactionItem';
 import { EmptyState } from '@/src/components/ui/EmptyState';
+import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const user = useAuthUser();
+  const contentPaddingBottom = useTabScreenBottomPadding();
 
   const { data: profile } = useCustomerProfile();
   const { data: activeOrdersData, isLoading: isOrdersLoading } = useCustomerActiveOrders(1, 10);
@@ -29,30 +31,30 @@ export default function DashboardScreen() {
   const displayName = profile?.name || user?.name || 'Khách hàng';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Tổng quan</Text>
         <Text style={styles.subtitle}>Xin chào, {displayName}</Text>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.statsScroll}
-        contentContainerStyle={styles.statsScrollContent}
-      >
+      <View style={styles.statsGrid}>
         <OverviewWidget
           title="Tổng cân"
           value={(profile?.totalWeight ?? 0).toFixed(2)}
           suffix="KG"
           icon={<Feather name="package" size={16} color={colors.primaryDark} />}
           colorScheme="yellow"
+          style={styles.statGridItem}
         />
         <OverviewWidget
           title="Tổng tiền hàng"
           value={formatCurrency(profile?.totalAmount ?? 0)}
           icon={<Feather name="shield" size={16} color={colors.primaryDark} />}
           colorScheme="yellow"
+          style={styles.statGridItem}
         />
         <OverviewWidget
           title="Đơn đang xử lý"
@@ -60,6 +62,7 @@ export default function DashboardScreen() {
           suffix="ĐƠN"
           icon={<Feather name="clock" size={16} color={colors.info} />}
           colorScheme="royalBlue"
+          style={styles.statGridItem}
         />
         <OverviewWidget
           title="Tổng đơn"
@@ -67,8 +70,9 @@ export default function DashboardScreen() {
           suffix="ĐƠN"
           icon={<Feather name="truck" size={16} color={colors.textSecondary} />}
           colorScheme="graphite"
+          style={styles.statGridItem}
         />
-      </ScrollView>
+      </View>
 
       {profile?.dedicatedStaff ? (
         <View style={styles.section}>
@@ -153,7 +157,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingTop: spacing['4xl'],
-    paddingBottom: spacing['4xl'],
   },
   header: {
     paddingHorizontal: spacing.xl,
@@ -173,11 +176,18 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
-  statsScroll: {
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
     marginBottom: spacing.xl,
   },
-  statsScrollContent: {
-    paddingHorizontal: spacing.xl,
+  statGridItem: {
+    width: 'auto',
+    flexBasis: '47%',
+    flexGrow: 1,
+    marginRight: 0,
   },
   section: {
     paddingHorizontal: spacing.xl,

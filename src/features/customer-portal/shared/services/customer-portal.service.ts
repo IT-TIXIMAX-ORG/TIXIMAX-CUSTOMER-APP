@@ -402,6 +402,12 @@ export interface TransactionQuery {
   dateTo?: string;
 }
 
+const toStartOfDayParam = (value: string): string =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value;
+
+const toEndOfDayParam = (value: string): string =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T23:59:59` : value;
+
 export const getCustomerTransactions = async (
   page = 1, 
   size = 10, 
@@ -412,8 +418,8 @@ export const getCustomerTransactions = async (
     if (query.keyword) params.keyword = query.keyword;
     if (query.type) params.type = query.type;
     if (query.purpose) params.purpose = query.purpose;
-    if (query.dateFrom) params.date_from = query.dateFrom;
-    if (query.dateTo) params.date_to = query.dateTo;
+    if (query.dateFrom) params.date_from = toStartOfDayParam(query.dateFrom);
+    if (query.dateTo) params.date_to = toEndOfDayParam(query.dateTo);
   }
   const response = await httpClient.get('/customer-portal/transactions', { params });
   const data = toRecord(response.data);

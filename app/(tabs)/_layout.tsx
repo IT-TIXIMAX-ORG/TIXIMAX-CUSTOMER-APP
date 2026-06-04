@@ -1,16 +1,22 @@
 import { Redirect, Tabs } from 'expo-router';
-import { Platform, type ColorValue } from 'react-native';
+import { type ColorValue } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 
 import { useIsAuthenticated, useIsAuthHydrated } from '@/src/features/auth/hooks/use-auth-store';
 import { colors, fontFamilyForWeight } from '@/src/theme/tokens';
+import {
+  TAB_BAR_BASE_HEIGHT,
+  TAB_BAR_TOP_PADDING,
+  useSafeBottomPadding,
+} from '@/src/shared/lib/layout/safe-area';
 
 type FeatherIconName = ComponentProps<typeof Feather>['name'];
 
 export default function TabLayout() {
   const isAuthenticated = useIsAuthenticated();
   const isHydrated = useIsAuthHydrated();
+  const safeBottomPadding = useSafeBottomPadding();
 
   if (isHydrated && !isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
@@ -26,9 +32,9 @@ export default function TabLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.borderLight,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 64,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
-          paddingTop: 8,
+          height: TAB_BAR_BASE_HEIGHT + safeBottomPadding,
+          paddingBottom: safeBottomPadding,
+          paddingTop: TAB_BAR_TOP_PADDING,
           elevation: 0,
           shadowOpacity: 0,
         },

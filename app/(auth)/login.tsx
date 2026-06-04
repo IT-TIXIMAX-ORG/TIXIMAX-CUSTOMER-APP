@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -85,18 +85,36 @@ export default function LoginScreen() {
   const [isForgotPasswordSendOtpLoading, setIsForgotPasswordSendOtpLoading] = useState(false);
   const [isForgotPasswordResetLoading, setIsForgotPasswordResetLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isRegisterStaffLoading, setIsRegisterStaffLoading] = useState(false);
+  const [registerStaffError, setRegisterStaffError] = useState('');
 
   const login = useAuthStore((s) => s.login);
   const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
   const isLoading = useAuthStore((s) => s.isLoading);
 
+  const loadRegisterStaff = useCallback(async () => {
+    try {
+      setIsRegisterStaffLoading(true);
+      setRegisterStaffError('');
+      const staff = await getReferralSaleStaff();
+      setRegisterStaffOptions(staff);
+
+      if (!staff.length) {
+        setRegisterStaffError('Không có nhân viên giới thiệu');
+      }
+    } catch (error: any) {
+      setRegisterStaffOptions([]);
+      setRegisterStaffError(getErrorMessage(error, 'Không tải được danh sách nhân viên'));
+    } finally {
+      setIsRegisterStaffLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isRegisterVisible) return;
 
-    void getReferralSaleStaff()
-      .then(setRegisterStaffOptions)
-      .catch(() => setRegisterStaffOptions([]));
-  }, [isRegisterVisible]);
+    void loadRegisterStaff();
+  }, [isRegisterVisible, loadRegisterStaff]);
 
   const resetRegisterForm = () => {
     setRegisterName('');
@@ -105,6 +123,7 @@ export default function LoginScreen() {
     setRegisterPassword('');
     setRegisterPasswordConfirm('');
     setRegisterStaffId('');
+    setRegisterStaffError('');
   };
 
   const resetForgotPasswordForm = () => {
@@ -154,6 +173,9 @@ export default function LoginScreen() {
       description: staff.phone,
     })),
   ];
+  const registerStaffStatusText = isRegisterStaffLoading
+    ? 'Đang tải danh sách nhân viên...'
+    : registerStaffError;
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -567,6 +589,13 @@ export default function LoginScreen() {
           value={registerStaffId}
           options={registerStaffSelectOptions}
           onChange={setRegisterStaffId}
+          onOpen={() => {
+            if (!isRegisterStaffLoading && !registerStaffOptions.length) {
+              void loadRegisterStaff();
+            }
+          }}
+          statusText={registerStaffStatusText}
+          statusTone={registerStaffError && !isRegisterStaffLoading ? 'error' : 'muted'}
         />
         <View style={styles.modalActions}>
           <AppButton title="Đóng" variant="outline" onPress={closeRegisterModal} style={{ flex: 1 }} />

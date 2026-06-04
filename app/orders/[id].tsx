@@ -10,11 +10,15 @@ import { StatusBadge } from '@/src/components/ui/StatusBadge';
 import { formatCurrency, formatDate, formatWeight } from '@/src/shared/lib/utils';
 import { AppCard } from '@/src/components/ui/AppCard';
 import { EmptyState } from '@/src/components/ui/EmptyState';
-import { humanizeEnum, orderTypeLabel, transactionPurposeLabel } from '@/src/shared/lib/labels';
+import { humanizeEnum, orderLogActionLabel, orderTypeLabel, transactionPurposeLabel } from '@/src/shared/lib/labels';
 
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams();
-  const { data: order, isLoading } = useCustomerOrderDetail(String(id || ''));
+  const orderId = String(id || '');
+  const { data: order, isFetching, isLoading, refetch } = useCustomerOrderDetail(orderId);
+  const reloadOrder = () => {
+    void refetch();
+  };
 
   if (isLoading) {
     return (
@@ -29,6 +33,7 @@ export default function OrderDetailScreen() {
       <View style={styles.centerContainer}>
         <Feather name="alert-circle" size={48} color={colors.textMuted} />
         <Text style={styles.errorText}>Không tìm thấy đơn hàng</Text>
+        <ReloadButton isFetching={isFetching} onPress={reloadOrder} style={styles.centerReloadButton} />
       </View>
     );
   }
@@ -52,6 +57,10 @@ export default function OrderDetailScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.topActions}>
+        <ReloadButton isFetching={isFetching} onPress={reloadOrder} />
+      </View>
+
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.orderCode}>{order.orderCode}</Text>
@@ -78,39 +87,40 @@ export default function OrderDetailScreen() {
         </AppCard>
 
         {paymentSessions.length ? (
-          paymentSessions.map((session, index) => (
-            <AppCard key={`${session.paymentId || session.id || index}`} style={styles.qrCard}>
-              <View style={styles.qrHeader}>
-                <View>
-                  <Text style={styles.qrTitle}>{transactionPurposeLabel(session.purpose || session.paymentType)}</Text>
-                  <Text style={styles.qrAmount}>{formatCurrency(session.amount ?? 0)}</Text>
+          paymentSessions.map((session, index) => {
+            return (
+              <AppCard key={`${session.paymentId || session.id || index}`} style={styles.qrCard}>
+                <View style={styles.qrHeader}>
+                  <View>
+                    <Text style={styles.qrTitle}>{transactionPurposeLabel(session.purpose || session.paymentType)}</Text>
+                  </View>
+                  <StatusBadge status={session.status} />
                 </View>
-                <StatusBadge status={session.status} />
-              </View>
-              {session.qrCode ? (
-                <Image source={{ uri: session.qrCode }} style={styles.qrImage} resizeMode="contain" />
-              ) : null}
-              {session.content ? (
-                <Pressable
-                  style={styles.copyBox}
-                  onPress={async () => {
-                    await Clipboard.setStringAsync(session.content || '');
-                    Toast.show({ type: 'success', text1: 'Đã copy nội dung chuyển khoản' });
-                  }}
-                >
-                  <Text style={styles.copyText}>{session.content}</Text>
-                  <Feather name="copy" size={14} color={colors.primaryDark} />
-                </Pressable>
-              ) : null}
-              {session.bankAccount ? (
-                <View style={styles.bankBox}>
-                  <InfoRow label="Ngân hàng" value={session.bankAccount.bankName} />
-                  <InfoRow label="Số tài khoản" value={session.bankAccount.accountNumber} />
-                  <InfoRow label="Chủ tài khoản" value={session.bankAccount.accountHolder} />
-                </View>
-              ) : null}
-            </AppCard>
-          ))
+                {session.qrCode ? (
+                  <Image source={{ uri: session.qrCode }} style={styles.qrImage} resizeMode="contain" />
+                ) : null}
+                {session.content ? (
+                  <Pressable
+                    style={styles.copyBox}
+                    onPress={async () => {
+                      await Clipboard.setStringAsync(session.content || '');
+                      Toast.show({ type: 'success', text1: 'Đã copy nội dung chuyển khoản' });
+                    }}
+                  >
+                    <Text style={styles.copyText}>{session.content}</Text>
+                    <Feather name="copy" size={14} color={colors.primaryDark} />
+                  </Pressable>
+                ) : null}
+                {session.bankAccount ? (
+                  <View style={styles.bankBox}>
+                    <InfoRow label="Ngân hàng" value={session.bankAccount.bankName} />
+                    <InfoRow label="Số tài khoản" value={session.bankAccount.accountNumber} />
+                    <InfoRow label="Chủ tài khoản" value={session.bankAccount.accountHolder} />
+                  </View>
+                ) : null}
+              </AppCard>
+            );
+          })
         ) : (
           <Text style={styles.mutedText}>Chưa có phiên thanh toán đang chờ.</Text>
         )}
@@ -195,7 +205,7 @@ export default function OrderDetailScreen() {
                   </View>
                   <View style={styles.timelineContent}>
                     <Text style={[styles.timelineAction, isFirst && styles.timelineActionActive]}>
-                      {log.action ? humanizeEnum(log.action) : 'Cập nhật đơn hàng'}
+                      {orderLogActionLabel(log.action)}
                     </Text>
                     <Text style={styles.timelineDate}>{formatDate(log.createdAt)}</Text>
                     {log.note ? <Text style={styles.timelineNote}>{log.note}</Text> : null}
@@ -240,6 +250,36 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function ReloadButton({
+  isFetching,
+  onPress,
+  style,
+}: {
+  isFetching: boolean;
+  onPress: () => void;
+  style?: object;
+}) {
+  return (
+    <Pressable
+      disabled={isFetching}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.reloadButton,
+        style,
+        pressed && styles.reloadButtonPressed,
+        isFetching && styles.reloadButtonDisabled,
+      ]}
+    >
+      {isFetching ? (
+        <ActivityIndicator size="small" color={colors.primaryDark} />
+      ) : (
+        <Feather name="refresh-cw" size={16} color={colors.primaryDark} />
+      )}
+      <Text style={styles.reloadText}>{isFetching ? 'Đang tải' : 'Reload'}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
@@ -254,6 +294,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: fontFamilyForWeight('700'),
   },
+  centerReloadButton: {
+    marginTop: spacing.lg,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -262,6 +305,35 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     paddingTop: spacing['3xl'],
     paddingBottom: spacing['4xl'],
+  },
+  topActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: spacing.md,
+  },
+  reloadButton: {
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.primaryBorder,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  reloadButtonPressed: {
+    opacity: 0.75,
+  },
+  reloadButtonDisabled: {
+    opacity: 0.7,
+  },
+  reloadText: {
+    color: colors.primaryDark,
+    fontSize: typography.fontSize.sm,
+    fontWeight: '900',
+    fontFamily: fontFamilyForWeight('900'),
   },
   header: {
     backgroundColor: colors.surface,
@@ -344,12 +416,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontFamily: fontFamilyForWeight('900'),
     color: colors.textPrimary,
-  },
-  qrAmount: {
-    color: colors.primaryDark,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    marginTop: 2,
   },
   qrImage: {
     width: '100%',

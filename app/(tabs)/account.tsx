@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Alert, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -26,12 +26,14 @@ import { AppInput } from '@/src/components/ui/AppInput';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
+import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 
 type AccountModal = 'profile' | 'address' | 'security' | 'verify' | 'support' | null;
 
 export default function AccountScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const contentPaddingBottom = useTabScreenBottomPadding(spacing.md);
   const user = useAuthUser();
   const { logout } = useAuthActions();
   const { data: profile, refetch } = useCustomerProfile();
@@ -53,6 +55,11 @@ export default function AccountScreen() {
   const [password, setPassword] = useState('');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isOldPasswordVisible, setIsOldPasswordVisible] = useState(false);
+  const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
   const displayName = profile?.name || user?.name || 'Khách hàng';
   const displayEmail = profile?.email || user?.email || '';
@@ -256,22 +263,56 @@ export default function AccountScreen() {
     setModal('verify');
   };
 
+  const resetPasswordForm = () => {
+    setPassword('');
+    setOldPassword('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setIsPasswordVisible(false);
+    setIsOldPasswordVisible(false);
+    setIsNewPasswordVisible(false);
+    setIsConfirmPasswordVisible(false);
+  };
+
+  const closeSecurityModal = () => {
+    resetPasswordForm();
+    setModal(null);
+  };
+
   const savePassword = async () => {
     if (profile?.hasPassword) {
+      if (!oldPassword.trim() || !newPassword.trim() || !confirmNewPassword.trim()) {
+        Toast.show({ type: 'error', text1: 'Vui lòng nhập đầy đủ mật khẩu' });
+        return;
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        Toast.show({ type: 'error', text1: 'Xác nhận mật khẩu mới không khớp' });
+        return;
+      }
+
       await runAction(
         async () => changeCurrentPassword({
           oldPassword,
           newPassword,
-          confirmNewPassword: newPassword,
+          confirmNewPassword,
         }),
         'Đã đổi mật khẩu',
       );
     } else {
+      if (!password.trim() || !confirmNewPassword.trim()) {
+        Toast.show({ type: 'error', text1: 'Vui lòng nhập đầy đủ mật khẩu' });
+        return;
+      }
+
+      if (password !== confirmNewPassword) {
+        Toast.show({ type: 'error', text1: 'Xác nhận mật khẩu không khớp' });
+        return;
+      }
+
       await runAction(async () => createLocalPassword(password), 'Đã tạo mật khẩu');
     }
-    setPassword('');
-    setOldPassword('');
-    setNewPassword('');
+    resetPasswordForm();
   };
 
   const staffSelectOptions = staffOptions.map((staff) => ({
@@ -317,7 +358,10 @@ export default function AccountScreen() {
   const nextTask = profileTasks.find((task) => !task.completed);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}
+    >
       <Text style={styles.title}>Tài khoản</Text>
 
       <View style={styles.profileCard}>
@@ -485,14 +529,48 @@ export default function AccountScreen() {
         </View>
       </ModalShell>
 
-      <ModalShell visible={modal === 'security'} title="Bảo mật và mật khẩu" onClose={() => setModal(null)}>
+      <ModalShell visible={modal === 'security'} title="Bảo mật và mật khẩu" onClose={closeSecurityModal}>
         {profile?.hasPassword ? (
           <>
-            <AppInput label="Mật khẩu cũ" value={oldPassword} onChangeText={setOldPassword} secureTextEntry />
-            <AppInput label="Mật khẩu mới" value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+            <PasswordInput
+              label="Mật khẩu cũ"
+              value={oldPassword}
+              onChangeText={setOldPassword}
+              isVisible={isOldPasswordVisible}
+              onToggleVisibility={() => setIsOldPasswordVisible((visible) => !visible)}
+            />
+            <PasswordInput
+              label="Mật khẩu mới"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              isVisible={isNewPasswordVisible}
+              onToggleVisibility={() => setIsNewPasswordVisible((visible) => !visible)}
+            />
+            <PasswordInput
+              label="Xác nhận mật khẩu mới"
+              value={confirmNewPassword}
+              onChangeText={setConfirmNewPassword}
+              isVisible={isConfirmPasswordVisible}
+              onToggleVisibility={() => setIsConfirmPasswordVisible((visible) => !visible)}
+            />
           </>
         ) : (
-          <AppInput label="Tạo mật khẩu" value={password} onChangeText={setPassword} secureTextEntry />
+          <>
+            <PasswordInput
+              label="Tạo mật khẩu"
+              value={password}
+              onChangeText={setPassword}
+              isVisible={isPasswordVisible}
+              onToggleVisibility={() => setIsPasswordVisible((visible) => !visible)}
+            />
+            <PasswordInput
+              label="Xác nhận mật khẩu"
+              value={confirmNewPassword}
+              onChangeText={setConfirmNewPassword}
+              isVisible={isConfirmPasswordVisible}
+              onToggleVisibility={() => setIsConfirmPasswordVisible((visible) => !visible)}
+            />
+          </>
         )}
         <AppButton title={profile?.hasPassword ? 'Đổi mật khẩu' : 'Tạo mật khẩu'} onPress={savePassword} isLoading={loading} />
       </ModalShell>
@@ -550,6 +628,46 @@ function MenuItem({
   );
 }
 
+function PasswordInput({
+  label,
+  value,
+  onChangeText,
+  isVisible,
+  onToggleVisibility,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  isVisible: boolean;
+  onToggleVisibility: () => void;
+}) {
+  return (
+    <View style={styles.passwordField}>
+      <Text style={styles.passwordLabel}>{label}</Text>
+      <View style={styles.passwordInputBox}>
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={!isVisible}
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={styles.passwordInput}
+          placeholderTextColor={colors.textMuted}
+        />
+        <Pressable
+          onPress={onToggleVisibility}
+          style={styles.passwordToggle}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={isVisible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+        >
+          <Feather name={isVisible ? 'eye-off' : 'eye'} size={18} color={colors.textSecondary} />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -558,7 +676,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
   },
   title: {
     fontSize: typography.fontSize.xl,
@@ -849,6 +966,42 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     fontWeight: '700',
     fontFamily: fontFamilyForWeight('700'),
+  },
+  passwordField: {
+    marginBottom: spacing.md,
+  },
+  passwordLabel: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: '700',
+    fontFamily: fontFamilyForWeight('700'),
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+    textTransform: 'uppercase',
+  },
+  passwordInputBox: {
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.md,
+  },
+  passwordInput: {
+    flex: 1,
+    height: '100%',
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
+    fontSize: typography.fontSize.sm,
+    color: colors.textPrimary,
+    fontWeight: '500',
+    fontFamily: fontFamilyForWeight('500'),
+  },
+  passwordToggle: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addressItem: {
     flexDirection: 'row',

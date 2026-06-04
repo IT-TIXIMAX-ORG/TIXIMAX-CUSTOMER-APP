@@ -28,6 +28,7 @@ import {
   createCustomerPurchaseOrder,
 } from '@/src/features/customer-portal/shared/services/create-order.service';
 import { uploadImageUri } from '@/src/shared/services/upload-image.service';
+import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, parseNumberInput } from '@/src/shared/lib/utils';
 
 type OrderTypeId = 'MUA_HO' | 'KY_GUI' | 'CHUYEN_TIEN' | 'DAU_GIA';
@@ -98,6 +99,7 @@ const orderTypes: Array<{
 
 export default function CreateOrderScreen() {
   const queryClient = useQueryClient();
+  const contentPaddingBottom = useTabScreenBottomPadding();
   const { data: profile, refetch: refetchProfile } = useCustomerProfile();
   const [selectedType, setSelectedType] = useState<OrderTypeId | null>(null);
   const [routeId, setRouteId] = useState('');
@@ -445,7 +447,10 @@ export default function CreateOrderScreen() {
 
   return (
     <>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}
+    >
       {selectedType ? (
         <View>
           <Pressable style={styles.backButton} onPress={() => setSelectedType(null)}>
@@ -767,7 +772,6 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.xl,
     paddingTop: spacing['3xl'],
-    paddingBottom: spacing['4xl'],
   },
   title: {
     fontSize: typography.fontSize.xl,
