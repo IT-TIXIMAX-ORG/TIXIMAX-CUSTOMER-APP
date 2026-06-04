@@ -16,6 +16,7 @@ import { PaperProvider } from 'react-native-paper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
 import { ActivityIndicator, Text, TextInput, View } from 'react-native';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 import { paperTheme } from '@/src/theme/paper-theme';
 import { useAuthStore } from '@/src/features/auth/stores/auth.store';
@@ -133,10 +134,12 @@ export default function RootLayout() {
   configureDefaultFont();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <PaperProvider theme={paperTheme}>
-        <AppContent />
-      </PaperProvider>
-    </QueryClientProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <QueryClientProvider client={queryClient}>
+        <PaperProvider theme={paperTheme}>
+          <AppContent />
+        </PaperProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }

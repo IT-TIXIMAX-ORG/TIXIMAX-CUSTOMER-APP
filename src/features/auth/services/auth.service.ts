@@ -1,5 +1,6 @@
 import { authHttpClient, httpClient } from '@/src/shared/lib/http/http-client';
 import type { ReferralStaffOption } from '@/src/features/customer-portal/shared/types/master-data.types';
+import { ENV_CONFIG } from '@/src/shared/constants/env.constants';
 
 const toRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
@@ -20,11 +21,12 @@ const unwrapList = (value: unknown): unknown[] => {
   return [];
 };
 
-export const getReferralSaleStaff = async (): Promise<ReferralStaffOption[]> => {
-  const response = await authHttpClient.get('/customer-portal/staff', {
-    params: { page: 1, size: 20, role: 'LEAD_SALE,STAFF_SALE' },
-  });
-  return unwrapList(response.data)
+const STAFF_QUERY = 'page=1&size=20&role=LEAD_SALE%2CSTAFF_SALE';
+const STAFF_PATH = `/customer-portal/staff?${STAFF_QUERY}`;
+const STAFF_TIMEOUT_MS = 8000;
+
+const parseReferralStaff = (value: unknown): ReferralStaffOption[] =>
+  unwrapList(value)
     .map((item) => {
       const staff = toRecord(item);
       return {
@@ -35,6 +37,58 @@ export const getReferralSaleStaff = async (): Promise<ReferralStaffOption[]> => 
       };
     })
     .filter((staff) => staff.accountId && staff.name);
+
+const withTimeout = async <T>(promise: Promise<T>, message: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(message)), STAFF_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+};
+
+const fetchReferralSaleStaff = async (): Promise<ReferralStaffOption[]> => {
+  const controller = new AbortController();
+
+  return withTimeout(
+    fetch(`${ENV_CONFIG.apiBaseUrl}${STAFF_PATH}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Không tải được danh sách nhân viên (${response.status})`);
+        }
+
+        return parseReferralStaff(await response.json());
+      })
+      .finally(() => controller.abort()),
+    'Không tải được danh sách nhân viên (timeout)',
+  );
+};
+
+const axiosReferralSaleStaff = async (): Promise<ReferralStaffOption[]> => {
+  const response = await withTimeout(
+    authHttpClient.get(STAFF_PATH, { timeout: STAFF_TIMEOUT_MS }),
+    'Không tải được danh sách nhân viên (timeout)',
+  );
+
+  return parseReferralStaff(response.data);
+};
+
+export const getReferralSaleStaff = async (): Promise<ReferralStaffOption[]> => {
+  try {
+    return await axiosReferralSaleStaff();
+  } catch {
+    return fetchReferralSaleStaff();
+  }
 };
 
 export const createLocalPassword = async (password: string): Promise<void> => {

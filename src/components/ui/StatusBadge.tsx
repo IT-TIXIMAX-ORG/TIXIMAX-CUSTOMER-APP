@@ -1,17 +1,14 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, borderRadius, typography, spacing, fontFamilyForWeight } from '@/src/theme/tokens';
-import { statusLabel } from '@/src/shared/lib/labels';
+import { normalizeLabelKey, statusLabel } from '@/src/shared/lib/labels';
 
 interface StatusBadgeProps {
   status?: string | null;
   label?: string;
 }
 
-const normalizeStatus = (status?: string | null) =>
-  String(status || '').trim().toUpperCase();
-
 const getStatusConfig = (status?: string | null) => {
-  switch (normalizeStatus(status)) {
+  switch (normalizeLabelKey(status)) {
     case 'CHO_THANH_TOAN':
     case 'CHO_THANH_TOAN_DAU_GIA':
     case 'CHO_THANH_TOAN_SHIP':

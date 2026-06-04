@@ -12,6 +12,7 @@ import { AppInput } from '@/src/components/ui/AppInput';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
+import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, formatDate } from '@/src/shared/lib/utils';
 import { statusLabel, transactionPurposeLabel } from '@/src/shared/lib/labels';
 
@@ -24,22 +25,47 @@ const PURPOSE_OPTIONS = [
   { label: 'Hoàn tiền', value: 'REFUND' },
 ];
 
+const formatLocalApiDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+};
+
+const normalizeFilterDate = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+  const viDate = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (!viDate) return trimmed;
+
+  const [, day, month, year] = viDate;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
 export default function TransactionsScreen() {
+  const contentPaddingBottom = useTabScreenBottomPadding();
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<CustomerTransaction[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [draftKeyword, setDraftKeyword] = useState('');
   const [purpose, setPurpose] = useState('');
+  const [draftPurpose, setDraftPurpose] = useState('');
   const [dateFrom, setDateFrom] = useState('');
+  const [draftDateFrom, setDraftDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [draftDateTo, setDraftDateTo] = useState('');
   const [selectedTx, setSelectedTx] = useState<CustomerTransaction | null>(null);
   const pageSize = 15;
 
   const query = useMemo<TransactionQuery>(
     () => ({
       keyword: keyword || undefined,
-      purpose: purpose || undefined,
+      type: purpose === 'REFUND' ? 'REFUND' : undefined,
+      purpose: purpose && purpose !== 'REFUND' ? purpose : undefined,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
     }),
@@ -58,8 +84,19 @@ export default function TransactionsScreen() {
     setItems([]);
   };
 
+  const openFilters = () => {
+    setDraftKeyword(keyword);
+    setDraftPurpose(purpose);
+    setDraftDateFrom(dateFrom);
+    setDraftDateTo(dateTo);
+    setFilterOpen(true);
+  };
+
   const applyFilters = () => {
     setKeyword(draftKeyword.trim());
+    setPurpose(draftPurpose);
+    setDateFrom(normalizeFilterDate(draftDateFrom));
+    setDateTo(normalizeFilterDate(draftDateTo));
     resetPage();
     setFilterOpen(false);
   };
@@ -68,8 +105,13 @@ export default function TransactionsScreen() {
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - days);
-    setDateFrom(start.toISOString().slice(0, 10));
-    setDateTo(end.toISOString().slice(0, 10));
+    const nextDateFrom = formatLocalApiDate(start);
+    const nextDateTo = formatLocalApiDate(end);
+
+    setDateFrom(nextDateFrom);
+    setDateTo(nextDateTo);
+    setDraftDateFrom(nextDateFrom);
+    setDraftDateTo(nextDateTo);
     resetPage();
   };
 
@@ -77,9 +119,13 @@ export default function TransactionsScreen() {
     setKeyword('');
     setDraftKeyword('');
     setPurpose('');
+    setDraftPurpose('');
     setDateFrom('');
+    setDraftDateFrom('');
     setDateTo('');
+    setDraftDateTo('');
     resetPage();
+    setFilterOpen(false);
   };
 
   const renderHeader = () => (
@@ -89,10 +135,10 @@ export default function TransactionsScreen() {
       <View style={styles.quickRow}>
         <AppButton title="7 ngày" size="sm" variant="outline" onPress={() => quickRange(7)} />
         <AppButton title="30 ngày" size="sm" variant="outline" onPress={() => quickRange(30)} />
-        <AppButton title="Bộ lọc" size="sm" onPress={() => setFilterOpen(true)} />
+        <AppButton title="Bộ lọc" size="sm" onPress={openFilters} />
       </View>
       {(keyword || purpose || dateFrom || dateTo) ? (
-        <Pressable style={styles.activeFilter} onPress={() => setFilterOpen(true)}>
+        <Pressable style={styles.activeFilter} onPress={openFilters}>
           <Feather name="filter" size={14} color={colors.primaryDark} />
           <Text style={styles.activeFilterText}>Đang áp dụng bộ lọc</Text>
         </Pressable>
@@ -139,7 +185,7 @@ export default function TransactionsScreen() {
             <TransactionItem transaction={item} />
           </Pressable>
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
@@ -153,13 +199,13 @@ export default function TransactionsScreen() {
           value={draftKeyword}
           onChangeText={setDraftKeyword}
         />
-        <SelectSheet label="Loại giao dịch" value={purpose} options={PURPOSE_OPTIONS} onChange={setPurpose} />
+        <SelectSheet label="Loại giao dịch" value={draftPurpose} options={PURPOSE_OPTIONS} onChange={setDraftPurpose} />
         <View style={styles.dateRow}>
           <View style={styles.dateCol}>
-            <AppInput label="Từ ngày" placeholder="YYYY-MM-DD" value={dateFrom} onChangeText={setDateFrom} />
+            <AppInput label="Từ ngày" placeholder="YYYY-MM-DD hoặc DD/MM/YYYY" value={draftDateFrom} onChangeText={setDraftDateFrom} />
           </View>
           <View style={styles.dateCol}>
-            <AppInput label="Đến ngày" placeholder="YYYY-MM-DD" value={dateTo} onChangeText={setDateTo} />
+            <AppInput label="Đến ngày" placeholder="YYYY-MM-DD hoặc DD/MM/YYYY" value={draftDateTo} onChangeText={setDraftDateTo} />
           </View>
         </View>
         <View style={styles.modalActions}>
@@ -233,7 +279,6 @@ const styles = StyleSheet.create({
   listContent: {
     padding: spacing.xl,
     paddingTop: spacing['3xl'],
-    paddingBottom: spacing['4xl'],
   },
   header: {
     marginBottom: spacing.xl,

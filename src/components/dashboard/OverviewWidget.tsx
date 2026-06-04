@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
 import { AppCard } from '../ui/AppCard';
 import { type ReactNode } from 'react';
@@ -9,9 +9,10 @@ interface OverviewWidgetProps {
   suffix?: string;
   icon: ReactNode;
   colorScheme?: 'yellow' | 'royalBlue' | 'graphite' | 'emerald';
+  style?: StyleProp<ViewStyle>;
 }
 
-export function OverviewWidget({ title, value, suffix, icon, colorScheme = 'yellow' }: OverviewWidgetProps) {
+export function OverviewWidget({ title, value, suffix, icon, colorScheme = 'yellow', style }: OverviewWidgetProps) {
   const getIconColor = () => {
     switch (colorScheme) {
       case 'yellow': return colors.primaryDark;
@@ -33,7 +34,7 @@ export function OverviewWidget({ title, value, suffix, icon, colorScheme = 'yell
   };
 
   return (
-    <AppCard style={styles.container}>
+    <AppCard style={[styles.container, style]}>
       <View style={styles.header}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
         <View style={[styles.iconWrapper, { backgroundColor: getIconBg() }]}>
@@ -41,7 +42,7 @@ export function OverviewWidget({ title, value, suffix, icon, colorScheme = 'yell
         </View>
       </View>
       <View style={styles.valueContainer}>
-        <Text style={styles.value} numberOfLines={1}>{value}</Text>
+        <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{value}</Text>
         {suffix && <Text style={styles.suffix}>{suffix}</Text>}
       </View>
     </AppCard>

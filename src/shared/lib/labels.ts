@@ -6,8 +6,18 @@ export const humanizeEnum = (value?: string | null) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ') || 'Chưa cập nhật';
 
+export const normalizeLabelKey = (value?: string | null) =>
+  String(value || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'D')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
 export const orderTypeLabel = (type?: string | null) => {
-  switch (type) {
+  switch (normalizeLabelKey(type)) {
     case 'MUA_HO':
       return 'Mua hộ';
     case 'KY_GUI':
@@ -21,9 +31,12 @@ export const orderTypeLabel = (type?: string | null) => {
 };
 
 export const transactionPurposeLabel = (purpose?: string | null) => {
-  switch (purpose) {
+  switch (normalizeLabelKey(purpose)) {
     case 'ORDER_PAYMENT':
+    case 'THANH_TOAN_TIEN_HANG':
       return 'Thanh toán tiền hàng';
+    case 'THANH_TOAN_DON_HANG':
+      return 'Thanh toán đơn hàng';
     case 'AUCTION_PAYMENT':
       return 'Thanh toán sau đấu giá';
     case 'AUCTION_REFUND':
@@ -54,12 +67,13 @@ export const transactionPurposeLabel = (purpose?: string | null) => {
 };
 
 export const statusLabel = (status?: string | null) => {
-  switch (String(status || '').toUpperCase()) {
+  switch (normalizeLabelKey(status)) {
     case 'CHO_XAC_NHAN':
       return 'Chờ xác nhận';
     case 'DA_XAC_NHAN':
       return 'Đã xác nhận';
     case 'CHO_THANH_TOAN':
+    case 'CHO_THANH_TOAN_DAU_GIA':
     case 'CHUA_THANH_TOAN':
     case 'WAITING_FOR_PAYMENT':
       return 'Chờ thanh toán';
@@ -98,5 +112,32 @@ export const statusLabel = (status?: string | null) => {
       return 'Đã hủy';
     default:
       return humanizeEnum(status);
+  }
+};
+
+export const orderLogActionLabel = (action?: string | null) => {
+  switch (normalizeLabelKey(action)) {
+    case 'TAO_DON':
+    case 'TAO_DON_HANG':
+      return 'Tạo đơn hàng';
+    case 'TAO_THANH_TOAN_HANG':
+    case 'TAO_THANH_TOAN_DON_HANG':
+    case 'CREATE_ORDER_PAYMENT':
+      return 'Tạo thanh toán đơn hàng';
+    case 'CAP_NHAT_DON':
+    case 'CAP_NHAT_DON_HANG':
+      return 'Cập nhật đơn hàng';
+    case 'DUYET_DON':
+      return 'Duyệt đơn';
+    case 'DUYET_DON_CUSTOMER':
+      return 'Duyệt đơn khách hàng';
+    case 'XAC_NHAN_DON':
+      return 'Xác nhận đơn';
+    case 'HUY_DON':
+      return 'Hủy đơn';
+    case 'YEU_CAU_HUY':
+      return 'Yêu cầu hủy';
+    default:
+      return action ? statusLabel(action) : 'Cập nhật đơn hàng';
   }
 };

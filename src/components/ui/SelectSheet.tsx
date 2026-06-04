@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
-import { ModalShell } from './ModalShell';
+import { useSafeBottomPadding } from '@/src/shared/lib/layout/safe-area';
 
 export interface SelectOption {
   label: string;
@@ -17,45 +17,88 @@ interface SelectSheetProps {
   placeholder?: string;
   options: SelectOption[];
   onChange: (value: string) => void;
+  onOpen?: () => void;
+  statusText?: string;
+  statusTone?: 'muted' | 'error';
 }
 
-export function SelectSheet({ label, value, placeholder = 'Chọn', options, onChange }: SelectSheetProps) {
+export function SelectSheet({
+  label,
+  value,
+  placeholder = 'Chọn',
+  options,
+  onChange,
+  onOpen,
+  statusText,
+  statusTone = 'muted',
+}: SelectSheetProps) {
   const [open, setOpen] = useState(false);
+  const { height } = useWindowDimensions();
+  const safeBottomPadding = useSafeBottomPadding();
   const selected = options.find((option) => option.value === value);
+  const dialogMaxHeight = Math.min(height * 0.72, 520);
+  const listMaxHeight = Math.min(height * 0.52, 380);
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <Pressable style={styles.trigger} onPress={() => setOpen(true)}>
+      <Pressable
+        style={styles.trigger}
+        onPress={() => {
+          onOpen?.();
+          setOpen(true);
+        }}
+      >
         <Text style={[styles.triggerText, !selected && styles.placeholder]} numberOfLines={1}>
           {selected?.label || placeholder}
         </Text>
         <Feather name="chevron-down" size={18} color={colors.textMuted} />
       </Pressable>
-      <ModalShell visible={open} title={label} onClose={() => setOpen(false)}>
-        <FlatList
-          data={options}
-          keyExtractor={(item) => item.value}
-          renderItem={({ item }) => {
-            const active = item.value === value;
-            return (
-              <Pressable
-                style={[styles.option, active && styles.activeOption]}
-                onPress={() => {
-                  onChange(item.value);
-                  setOpen(false);
-                }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.optionLabel, active && styles.activeText]}>{item.label}</Text>
-                  {item.description ? <Text style={styles.optionDescription}>{item.description}</Text> : null}
-                </View>
-                {active ? <Feather name="check" size={18} color={colors.primaryDark} /> : null}
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <View style={styles.dialogBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
+          <View style={[styles.dialog, { maxHeight: dialogMaxHeight }]}>
+            <View style={styles.dialogHeader}>
+              <Text style={styles.dialogTitle}>{label}</Text>
+              <Pressable style={styles.close} onPress={() => setOpen(false)}>
+                <Feather name="x" size={18} color={colors.textSecondary} />
               </Pressable>
-            );
-          }}
-        />
-      </ModalShell>
+            </View>
+            {statusText ? (
+              <Text style={[styles.statusText, statusTone === 'error' && styles.statusError]}>
+                {statusText}
+              </Text>
+            ) : null}
+            <FlatList
+              data={options}
+              style={[styles.optionsList, { maxHeight: listMaxHeight }]}
+              contentContainerStyle={{ paddingBottom: safeBottomPadding }}
+              keyExtractor={(item) => item.value}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={options.length > 5}
+              renderItem={({ item }) => {
+                const active = item.value === value;
+                return (
+                  <Pressable
+                    style={[styles.option, active && styles.activeOption]}
+                    onPress={() => {
+                      onChange(item.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.optionLabel, active && styles.activeText]}>{item.label}</Text>
+                      {item.description ? <Text style={styles.optionDescription}>{item.description}</Text> : null}
+                    </View>
+                    {active ? <Feather name="check" size={18} color={colors.primaryDark} /> : null}
+                  </Pressable>
+                );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -93,6 +136,52 @@ const styles = StyleSheet.create({
   placeholder: {
     color: colors.textMuted,
   },
+  dialogBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20,20,20,0.35)',
+    padding: spacing.xl,
+  },
+  dialog: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+  },
+  dialogHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  dialogTitle: {
+    flex: 1,
+    fontSize: typography.fontSize.base,
+    fontWeight: '900',
+    fontFamily: fontFamilyForWeight('900'),
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+  },
+  close: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusText: {
+    marginBottom: spacing.sm,
+    fontSize: typography.fontSize.xs,
+    fontWeight: '700',
+    fontFamily: fontFamilyForWeight('700'),
+    color: colors.textSecondary,
+  },
+  statusError: {
+    color: colors.error,
+  },
   option: {
     padding: spacing.md,
     borderRadius: borderRadius.md,
@@ -111,6 +200,9 @@ const styles = StyleSheet.create({
   },
   activeText: {
     color: colors.primaryDark,
+  },
+  optionsList: {
+    flexGrow: 0,
   },
   optionDescription: {
     marginTop: 2,
