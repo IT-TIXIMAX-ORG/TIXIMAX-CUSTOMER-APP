@@ -1,22 +1,56 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
+import { useSafeBottomPadding } from '@/src/shared/lib/layout/safe-area';
 
 interface ModalShellProps {
   visible: boolean;
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  keyboardContentMaxHeight?: number;
 }
 
-export function ModalShell({ visible, title, onClose, children }: ModalShellProps) {
+export function ModalShell({
+  visible,
+  title,
+  onClose,
+  children,
+  keyboardContentMaxHeight,
+}: ModalShellProps) {
+  const { top } = useSafeAreaInsets();
+  const safeBottomPadding = useSafeBottomPadding();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!visible) setIsKeyboardVisible(false);
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+      <View
+        style={[
+          styles.backdrop,
+          isKeyboardVisible && styles.backdropWithKeyboard,
+          isKeyboardVisible && { paddingTop: Math.max(top, spacing.sm) },
+        ]}
+      >
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.sheet}>
           <View style={styles.header}>
@@ -25,7 +59,21 @@ export function ModalShell({ visible, title, onClose, children }: ModalShellProp
               <Feather name="x" size={18} color={colors.textSecondary} />
             </Pressable>
           </View>
-          {children}
+          <ScrollView
+            style={[
+              styles.scroll,
+              isKeyboardVisible && keyboardContentMaxHeight
+                ? { maxHeight: keyboardContentMaxHeight }
+                : null,
+            ]}
+            contentContainerStyle={[styles.content, { paddingBottom: safeBottomPadding }]}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+          >
+            {children}
+          </ScrollView>
         </View>
         <Toast />
       </View>
@@ -39,12 +87,21 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(20,20,20,0.35)',
   },
+  backdropWithKeyboard: {
+    justifyContent: 'flex-start',
+  },
   sheet: {
     maxHeight: '88%',
     backgroundColor: colors.surface,
     borderTopLeftRadius: borderRadius['2xl'],
     borderTopRightRadius: borderRadius['2xl'],
     padding: spacing.lg,
+  },
+  content: {
+    flexGrow: 1,
+  },
+  scroll: {
+    flexShrink: 1,
   },
   header: {
     flexDirection: 'row',

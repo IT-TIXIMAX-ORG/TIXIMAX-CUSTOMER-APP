@@ -1,5 +1,16 @@
 ﻿import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Alert, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Modal,
+  Alert,
+  TextInput,
+  Platform,
+  RefreshControl,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -39,6 +50,7 @@ export default function AccountScreen() {
   const { data: profile, refetch } = useCustomerProfile();
   const [modal, setModal] = useState<AccountModal>(null);
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -64,13 +76,27 @@ export default function AccountScreen() {
   const displayName = profile?.name || user?.name || 'Khách hàng';
   const displayEmail = profile?.email || user?.email || '';
   const hasAssignedStaff = Boolean(profile?.dedicatedStaff);
+
+  const refreshAccount = async () => {
+    if (Platform.OS === 'web' || isRefreshing) return;
+
+    try {
+      setIsRefreshing(true);
+      await refetch();
+    } catch {
+      // Keep the current profile visible when refresh fails.
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    if (!profile) return;
+    if (!profile || modal === 'profile') return;
     setName(profile.name || '');
     setEmail(profile.email || '');
     setPhone(profile.phone || '');
     setStaffId(profile.dedicatedStaff?.accountId || profile.dedicatedStaff?.staffId || '');
-  }, [profile]);
+  }, [modal, profile]);
 
   useEffect(() => {
     if (modal !== 'profile' || hasAssignedStaff) return;
@@ -361,6 +387,17 @@ export default function AccountScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}
+      alwaysBounceVertical
+      refreshControl={
+        Platform.OS !== 'web' ? (
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => void refreshAccount()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        ) : undefined
+      }
     >
       <Text style={styles.title}>Tài khoản</Text>
 

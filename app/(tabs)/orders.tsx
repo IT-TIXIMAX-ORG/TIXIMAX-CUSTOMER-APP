@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   Pressable,
   Alert,
+  Platform,
+  RefreshControl,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
@@ -26,6 +28,9 @@ import type {
 import {
   bookAllingoForDomesticDelivery,
   cancelAllingoForDomesticDelivery,
+  getCustomerActiveOrders,
+  getCustomerDomesticDeliveries,
+  getCustomerOrders,
   getDomesticDeliveryShippingQuotes,
   syncAllingoForDomesticDelivery,
   type CustomerActiveOrderQuery,
@@ -42,6 +47,7 @@ import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { StatusBadge } from '@/src/components/ui/StatusBadge';
 import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, formatDate, formatWeight } from '@/src/shared/lib/utils';
+import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 
 type OrdersTab = 'active' | 'history' | 'domestic';
 type OrderListRow = CustomerActiveOrder | CustomerOrder | CustomerDomesticDeliveryItem;
@@ -79,6 +85,7 @@ export default function OrdersScreen() {
   const [activeItems, setActiveItems] = useState<CustomerActiveOrder[]>([]);
   const [historyItems, setHistoryItems] = useState<CustomerOrder[]>([]);
   const [domesticItems, setDomesticItems] = useState<CustomerDomesticDeliveryItem[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [draftKeyword, setDraftKeyword] = useState('');
@@ -197,6 +204,46 @@ export default function OrdersScreen() {
     await queryClient.invalidateQueries({ queryKey: ['customer-portal', 'domestic-deliveries'] });
   };
 
+  const refreshAllOrderTabs = async () => {
+    if (Platform.OS === 'web' || isRefreshing) return;
+
+    try {
+      setIsRefreshing(true);
+      const [activeResult, historyResult, domesticResult] = await Promise.allSettled([
+        getCustomerActiveOrders(1, pageSize, activeQuery),
+        getCustomerOrders(1, pageSize, historyQuery),
+        getCustomerDomesticDeliveries(1, pageSize),
+      ]);
+
+      if (activeResult.status === 'fulfilled') {
+        queryClient.setQueryData(
+          ['customer-portal', 'orders', 'active', 1, pageSize, activeQuery],
+          activeResult.value,
+        );
+        setActivePage(1);
+        setActiveItems(activeResult.value.content);
+      }
+      if (historyResult.status === 'fulfilled') {
+        queryClient.setQueryData(
+          [...QUERY_KEYS.customerPortal.orders(1, pageSize, historyQuery.type), historyQuery],
+          historyResult.value,
+        );
+        setHistoryPage(1);
+        setHistoryItems(historyResult.value.content);
+      }
+      if (domesticResult.status === 'fulfilled') {
+        queryClient.setQueryData(
+          ['customer-portal', 'domestic-deliveries', 1, pageSize],
+          domesticResult.value,
+        );
+        setDomesticPage(1);
+        setDomesticItems(domesticResult.value.content);
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const openQuotes = async (item: CustomerDomesticDeliveryItem) => {
     setQuoteItem(item);
     setLoadingQuotes(true);
@@ -282,14 +329,7 @@ export default function OrdersScreen() {
             <Feather name="sliders" size={18} color={colors.primaryDark} />
           </Pressable>
         </View>
-      ) : (
-        <View style={styles.filterBar}>
-          <Pressable style={styles.refreshButton} onPress={() => domesticQuery.refetch()}>
-            <Feather name="refresh-cw" size={16} color={colors.primaryDark} />
-            <Text style={styles.refreshText}>Làm mới</Text>
-          </Pressable>
-        </View>
-      )}
+      ) : null}
     </View>
   );
 
@@ -356,6 +396,17 @@ export default function OrdersScreen() {
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
         showsVerticalScrollIndicator={false}
+        alwaysBounceVertical
+        refreshControl={
+          Platform.OS !== 'web' ? (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => void refreshAllOrderTabs()}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          ) : undefined
+        }
       />
 
       <ModalShell visible={filterOpen} title="Bộ lọc đơn hàng" onClose={() => setFilterOpen(false)}>
@@ -522,23 +573,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  refreshButton: {
-    height: 44,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    paddingHorizontal: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  refreshText: {
-    color: colors.primaryDark,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    textTransform: 'uppercase',
   },
   footer: {
     marginTop: spacing.lg,

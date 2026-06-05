@@ -76,22 +76,31 @@ export const statusLabel = (status?: string | null) => {
     case 'CHO_THANH_TOAN_DAU_GIA':
     case 'CHUA_THANH_TOAN':
     case 'WAITING_FOR_PAYMENT':
+    case 'PENDING':
       return 'Chờ thanh toán';
     case 'CHO_MUA':
       return 'Chờ mua';
     case 'DA_MUA':
       return 'Đã mua';
+    case 'DA_MUA_HANG':
+      return 'Đã mua hàng';
+    case 'DA_DONG_GOI':
+      return 'Đã đóng gói';
     case 'DANG_XU_LY':
       return 'Đang xử lý';
     case 'CHO_NHAP_KHO_NN':
+    case 'CHO_NHAP_KHO_NUOC_NGOAI':
       return 'Chờ nhập kho nước ngoài';
     case 'DA_NHAP_KHO_NN':
+    case 'DA_NHAP_KHO_NUOC_NGOAI':
       return 'Đã nhập kho nước ngoài';
     case 'DANG_CHUYEN_VN':
       return 'Đang chuyển về Việt Nam';
     case 'CHO_NHAP_KHO_VN':
+    case 'CHO_NHAP_KHO_VIET_NAM':
       return 'Chờ nhập kho Việt Nam';
     case 'DA_NHAP_KHO_VN':
+    case 'DA_NHAP_KHO_VIET_NAM':
       return 'Đã nhập kho Việt Nam';
     case 'CHO_THANH_TOAN_SHIP':
       return 'Chờ thanh toán vận chuyển';
@@ -124,6 +133,9 @@ export const orderLogActionLabel = (action?: string | null) => {
     case 'TAO_THANH_TOAN_DON_HANG':
     case 'CREATE_ORDER_PAYMENT':
       return 'Tạo thanh toán đơn hàng';
+    case 'TAO_THANH_TOAN_SHIP':
+    case 'CREATE_SHIPPING_PAYMENT':
+      return 'Tạo thanh toán vận chuyển';
     case 'CAP_NHAT_DON':
     case 'CAP_NHAT_DON_HANG':
       return 'Cập nhật đơn hàng';

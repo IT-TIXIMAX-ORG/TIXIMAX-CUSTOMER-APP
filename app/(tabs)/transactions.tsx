@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  Pressable,
+  Platform,
+  RefreshControl,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
 import { useCustomerTransactions } from '@/src/features/customer-portal/shared/hooks/use-customer-portal-data';
 import type { CustomerTransaction } from '@/src/features/customer-portal/shared/types/customer-portal.types';
-import type { TransactionQuery } from '@/src/features/customer-portal/shared/services/customer-portal.service';
+import {
+  getCustomerTransactions,
+  type TransactionQuery,
+} from '@/src/features/customer-portal/shared/services/customer-portal.service';
 import { TransactionItem } from '@/src/components/dashboard/TransactionItem';
 import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
@@ -15,6 +28,7 @@ import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, formatDate } from '@/src/shared/lib/utils';
 import { statusLabel, transactionPurposeLabel } from '@/src/shared/lib/labels';
+import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 
 const PURPOSE_OPTIONS = [
   { label: 'Tất cả', value: '' },
@@ -45,10 +59,35 @@ const normalizeFilterDate = (value: string) => {
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 };
 
+interface TransactionFilters {
+  keyword: string;
+  purpose: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+const normalizeTransactionFilters = (filters: TransactionFilters): TransactionFilters => ({
+  keyword: filters.keyword.trim(),
+  purpose: filters.purpose,
+  dateFrom: normalizeFilterDate(filters.dateFrom),
+  dateTo: normalizeFilterDate(filters.dateTo),
+});
+
+const areTransactionFiltersEqual = (
+  left: TransactionFilters,
+  right: TransactionFilters,
+) =>
+  left.keyword === right.keyword &&
+  left.purpose === right.purpose &&
+  left.dateFrom === right.dateFrom &&
+  left.dateTo === right.dateTo;
+
 export default function TransactionsScreen() {
   const contentPaddingBottom = useTabScreenBottomPadding();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<CustomerTransaction[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [draftKeyword, setDraftKeyword] = useState('');
@@ -79,9 +118,35 @@ export default function TransactionsScreen() {
     setItems((prev) => mergeByTransactionId(page === 1 ? [] : prev, data.content));
   }, [data, page]);
 
-  const resetPage = () => {
-    setPage(1);
-    setItems([]);
+  const applyTransactionFilters = (
+    nextFilters: TransactionFilters,
+    options: { closeFilter?: boolean; syncDraft?: boolean } = {},
+  ) => {
+    const normalized = normalizeTransactionFilters(nextFilters);
+    const currentFilters: TransactionFilters = { keyword, purpose, dateFrom, dateTo };
+    const filtersChanged = !areTransactionFiltersEqual(currentFilters, normalized);
+    const shouldResetList = filtersChanged || page !== 1;
+
+    setKeyword(normalized.keyword);
+    setPurpose(normalized.purpose);
+    setDateFrom(normalized.dateFrom);
+    setDateTo(normalized.dateTo);
+
+    if (options.syncDraft) {
+      setDraftKeyword(normalized.keyword);
+      setDraftPurpose(normalized.purpose);
+      setDraftDateFrom(normalized.dateFrom);
+      setDraftDateTo(normalized.dateTo);
+    }
+
+    if (shouldResetList) {
+      setPage(1);
+      setItems([]);
+    }
+
+    if (options.closeFilter) {
+      setFilterOpen(false);
+    }
   };
 
   const openFilters = () => {
@@ -93,12 +158,15 @@ export default function TransactionsScreen() {
   };
 
   const applyFilters = () => {
-    setKeyword(draftKeyword.trim());
-    setPurpose(draftPurpose);
-    setDateFrom(normalizeFilterDate(draftDateFrom));
-    setDateTo(normalizeFilterDate(draftDateTo));
-    resetPage();
-    setFilterOpen(false);
+    applyTransactionFilters(
+      {
+        keyword: draftKeyword,
+        purpose: draftPurpose,
+        dateFrom: draftDateFrom,
+        dateTo: draftDateTo,
+      },
+      { closeFilter: true, syncDraft: true },
+    );
   };
 
   const quickRange = (days: number) => {
@@ -108,24 +176,46 @@ export default function TransactionsScreen() {
     const nextDateFrom = formatLocalApiDate(start);
     const nextDateTo = formatLocalApiDate(end);
 
-    setDateFrom(nextDateFrom);
-    setDateTo(nextDateTo);
-    setDraftDateFrom(nextDateFrom);
-    setDraftDateTo(nextDateTo);
-    resetPage();
+    applyTransactionFilters(
+      {
+        keyword,
+        purpose,
+        dateFrom: nextDateFrom,
+        dateTo: nextDateTo,
+      },
+      { syncDraft: true },
+    );
   };
 
   const clearFilters = () => {
-    setKeyword('');
-    setDraftKeyword('');
-    setPurpose('');
-    setDraftPurpose('');
-    setDateFrom('');
-    setDraftDateFrom('');
-    setDateTo('');
-    setDraftDateTo('');
-    resetPage();
-    setFilterOpen(false);
+    applyTransactionFilters(
+      {
+        keyword: '',
+        purpose: '',
+        dateFrom: '',
+        dateTo: '',
+      },
+      { closeFilter: true, syncDraft: true },
+    );
+  };
+
+  const refreshTransactions = async () => {
+    if (Platform.OS === 'web' || isRefreshing) return;
+
+    try {
+      setIsRefreshing(true);
+      const refreshed = await getCustomerTransactions(1, pageSize, query);
+      queryClient.setQueryData(
+        [...QUERY_KEYS.customerPortal.transactions(1, pageSize), query],
+        refreshed,
+      );
+      setPage(1);
+      setItems(refreshed.content);
+    } catch {
+      // Keep the current list visible when refresh fails.
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const renderHeader = () => (
@@ -190,6 +280,17 @@ export default function TransactionsScreen() {
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
         showsVerticalScrollIndicator={false}
+        alwaysBounceVertical
+        refreshControl={
+          Platform.OS !== 'web' ? (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => void refreshTransactions()}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          ) : undefined
+        }
       />
 
       <ModalShell visible={filterOpen} title="Bộ lọc giao dịch" onClose={() => setFilterOpen(false)}>

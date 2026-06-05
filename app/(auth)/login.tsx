@@ -4,15 +4,14 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
   Pressable,
   ActivityIndicator,
   Image,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 import * as WebBrowser from 'expo-web-browser';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { useAuthStore } from '@/src/features/auth/stores/auth.store';
 import {
@@ -461,12 +460,15 @@ export default function LoginScreen() {
 
   return (
     <>
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        contentContainerStyle={styles.scrollContent}
+        bottomOffset={spacing.md}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.header}>
+        <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image
                 source={require('../../assets/app-icons/TIXIMAX-icon.jpg')}
@@ -476,9 +478,9 @@ export default function LoginScreen() {
             </View>
             <Text style={styles.brandName}>TIXIMAX</Text>
             <Text style={styles.subtitle}>Customer Portal</Text>
-          </View>
+        </View>
 
-          <View style={styles.formCard}>
+        <View style={styles.formCard}>
             <Text style={styles.formTitle}>Đăng nhập</Text>
 
             <View style={styles.inputGroup}>
@@ -550,13 +552,17 @@ export default function LoginScreen() {
             <Pressable style={styles.secondaryLink} onPress={openForgotPasswordEmailModal}>
               <Text style={styles.secondaryLinkText}>Quên mật khẩu</Text>
             </Pressable>
-          </View>
+        </View>
 
-          <Text style={styles.footer}>© 2026 TixiMax. All rights reserved.</Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <Text style={styles.footer}>© 2026 TixiMax. All rights reserved.</Text>
+      </KeyboardAwareScrollView>
 
-      <ModalShell visible={isRegisterVisible} title="Đăng ký" onClose={closeRegisterModal}>
+      <ModalShell
+        visible={isRegisterVisible}
+        title="Đăng ký"
+        onClose={closeRegisterModal}
+        keyboardContentMaxHeight={228}
+      >
         <AppInput label="Họ tên" value={registerName} onChangeText={setRegisterName} />
         <AppInput
           label="Email"

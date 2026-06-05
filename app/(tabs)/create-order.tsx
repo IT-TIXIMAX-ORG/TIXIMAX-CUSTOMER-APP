@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Pressable,
   Alert,
   ActivityIndicator,
@@ -14,6 +13,7 @@ import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useQueryClient } from '@tanstack/react-query';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
 import { AppInput } from '@/src/components/ui/AppInput';
@@ -447,9 +447,13 @@ export default function CreateOrderScreen() {
 
   return (
     <>
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}
+      bottomOffset={spacing.md}
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
       {selectedType ? (
         <View>
@@ -665,7 +669,7 @@ export default function CreateOrderScreen() {
           </View>
         </View>
       )}
-    </ScrollView>
+    </KeyboardAwareScrollView>
     <ModalShell visible={confirmOpen} title="Xác nhận tạo đơn" onClose={() => setConfirmOpen(false)}>
       <View style={styles.confirmContent}>
         <View style={styles.confirmIcon}>
