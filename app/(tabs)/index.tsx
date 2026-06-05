@@ -1,4 +1,14 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Pressable,
+  Platform,
+  RefreshControl,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
@@ -22,18 +32,53 @@ export default function DashboardScreen() {
   const user = useAuthUser();
   const contentPaddingBottom = useTabScreenBottomPadding();
 
-  const { data: profile } = useCustomerProfile();
-  const { data: activeOrdersData, isLoading: isOrdersLoading } = useCustomerActiveOrders(1, 10);
-  const { data: transactionsData, isLoading: isTransactionsLoading } = useCustomerTransactions(1, 5);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { data: profile, refetch: refetchProfile } = useCustomerProfile();
+  const {
+    data: activeOrdersData,
+    isLoading: isOrdersLoading,
+    refetch: refetchActiveOrders,
+  } = useCustomerActiveOrders(1, 10);
+  const {
+    data: transactionsData,
+    isLoading: isTransactionsLoading,
+    refetch: refetchTransactions,
+  } = useCustomerTransactions(1, 5);
 
   const activeOrders = activeOrdersData?.content || [];
   const transactions = transactionsData?.content || [];
   const displayName = profile?.name || user?.name || 'Khách hàng';
 
+  const refreshDashboard = async () => {
+    if (Platform.OS === 'web' || isRefreshing) return;
+
+    try {
+      setIsRefreshing(true);
+      await Promise.allSettled([
+        refetchProfile(),
+        refetchActiveOrders(),
+        refetchTransactions(),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}
+      alwaysBounceVertical
+      refreshControl={
+        Platform.OS !== 'web' ? (
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => void refreshDashboard()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        ) : undefined
+      }
     >
       <View style={styles.header}>
         <Text style={styles.title}>Tổng quan</Text>
