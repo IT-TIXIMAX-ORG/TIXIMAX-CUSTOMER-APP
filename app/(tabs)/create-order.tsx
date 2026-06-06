@@ -20,6 +20,7 @@ import { AppInput } from '@/src/components/ui/AppInput';
 import { AppButton } from '@/src/components/ui/AppButton';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { ModalShell } from '@/src/components/ui/ModalShell';
+import { ErrorState } from '@/src/components/ui/ErrorState';
 import { useCustomerProfile } from '@/src/features/customer-portal/shared/hooks/use-customer-profile';
 import { useCreateOrderMasterData } from '@/src/features/customer-portal/shared/hooks/use-create-order-master-data';
 import { addCustomerAddress } from '@/src/features/customer-portal/shared/services/customer-portal.service';
@@ -121,11 +122,13 @@ export default function CreateOrderScreen() {
   const isConsignmentOrder = selectedType === 'KY_GUI';
   const showRouteSection = isPurchaseOrder || isConsignmentOrder;
 
-  const { routes, productTypes, isInitialLoading } = useCreateOrderMasterData(
-    routeId,
-    serviceType,
-    showRouteSection,
-  );
+  const {
+    routes,
+    productTypes,
+    isInitialLoading,
+    isError: masterDataError,
+    refetch: refetchMasterData,
+  } = useCreateOrderMasterData(routeId, serviceType, showRouteSection);
   const selectedRoute = routes.find((route) => String(route.routeId) === routeId);
 
   useEffect(() => {
@@ -298,6 +301,9 @@ export default function CreateOrderScreen() {
   };
 
   const validateCommon = () => {
+    if (showRouteSection && (masterDataError || routes.length === 0)) {
+      return 'Chưa tải được dữ liệu tuyến và loại hàng. Vui lòng thử lại.';
+    }
     if (!addressId) return 'Vui lòng chọn địa chỉ nhận hàng.';
     if (!routeId) return 'Vui lòng chọn tuyến vận chuyển.';
     if (!exchangeRate || parseNumberInput(exchangeRate) <= 0) return 'Vui lòng nhập tỷ giá hợp lệ.';
@@ -479,6 +485,14 @@ export default function CreateOrderScreen() {
           {showRouteSection ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Thông tin tuyến</Text>
+              {masterDataError ? (
+                <ErrorState
+                  title="Không tải được dữ liệu tạo đơn"
+                  description="Danh sách tuyến và loại hàng chưa tải được. Vui lòng thử lại."
+                  onRetry={() => void refetchMasterData()}
+                  isRetrying={isInitialLoading}
+                />
+              ) : null}
               <SelectSheet
                 label="Tuyến vận chuyển"
                 value={routeId}

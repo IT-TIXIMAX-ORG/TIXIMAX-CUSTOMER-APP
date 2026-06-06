@@ -16,16 +16,18 @@ export const colors = {
   border: '#D4C4AD',
   borderLight: 'rgba(212, 196, 173, 0.3)',
 
-  // Text
+  // Text — chỉnh để đạt WCAG AA (>=4.5:1 trên nền trắng) cho body/secondary text.
   textPrimary: '#141414',
-  textSecondary: '#64748B', // slate-500
-  textMuted: '#94A3B8', // slate-400
-  textDisabled: '#CBD5E1', // slate-300
+  textSecondary: '#475569', // slate-600 (~7:1)
+  textMuted: '#64748B', // slate-500 (~4.6:1) — trước là slate-400 (#94A3B8, 2.56:1, fail AA)
+  textDisabled: '#CBD5E1', // slate-300 (chỉ dùng cho trạng thái disabled)
+  // Màu chữ/link nhấn trên nền trắng. KHÔNG dùng brand primary (vàng, 1.77:1) làm text.
+  actionText: '#B45309', // amber-700 (~5:1)
 
   // Status
   success: '#10B981', // emerald-500
   successLight: '#D1FAE5', // emerald-100
-  successText: '#059669', // emerald-600
+  successText: '#047857', // emerald-700 (~5:1) — đủ AA cho text trên nền trắng/successLight
   error: '#F43F5E', // rose-500
   errorLight: '#FFE4E6', // rose-100
   warning: '#F59E0B', // amber-500

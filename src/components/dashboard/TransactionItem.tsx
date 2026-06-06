@@ -1,19 +1,13 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, typography, spacing, fontFamilyForWeight } from '@/src/theme/tokens';
 import type { CustomerTransaction } from '@/src/features/customer-portal/shared/types/customer-portal.types';
-import { formatCurrency, formatDate } from '@/src/shared/lib/utils';
+import { formatDate } from '@/src/shared/lib/utils';
 import { transactionPurposeLabel } from '@/src/shared/lib/labels';
+import { formatTransactionAmount, isPositiveTransaction } from '@/src/features/customer-portal/shared/lib/transaction';
 
 interface TransactionItemProps {
   transaction: CustomerTransaction;
 }
-
-const isPositiveTransaction = (transaction: CustomerTransaction) => {
-  if (typeof transaction.beforeBalance === 'number' && typeof transaction.afterBalance === 'number') {
-    return transaction.afterBalance - transaction.beforeBalance > 0;
-  }
-  return ['INCOME', 'DEPOSIT', 'REFUND'].includes(transaction.type);
-};
 
 export function TransactionItem({ transaction }: TransactionItemProps) {
   const isPositive = isPositiveTransaction(transaction);
@@ -27,8 +21,7 @@ export function TransactionItem({ transaction }: TransactionItemProps) {
             {transactionPurposeLabel(transaction.purpose || transaction.description)}
           </Text>
           <Text style={[styles.amount, { color: isPositive ? colors.successText : colors.error }]}>
-            {isPositive ? '+' : '-'}
-            {formatCurrency(transaction.amount)}
+            {formatTransactionAmount(transaction)}
           </Text>
         </View>
         <View style={styles.bottomRow}>

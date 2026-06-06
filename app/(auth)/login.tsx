@@ -471,7 +471,7 @@ export default function LoginScreen() {
         <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image
-                source={require('../../assets/app-icons/TIXIMAX-icon.jpg')}
+                source={require('../../assets/app-icons/TIXIMAX-icon.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
@@ -524,26 +524,30 @@ export default function LoginScreen() {
               )}
             </Pressable>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Hoặc</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            {!GOOGLE_LOGIN_DISABLED ? (
+              <>
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>Hoặc</Text>
+                  <View style={styles.dividerLine} />
+                </View>
 
-            <Pressable
-              style={[
-                styles.googleButton,
-                (GOOGLE_LOGIN_DISABLED || isLoading || isGoogleLoading) && styles.googleButtonDisabled,
-              ]}
-              onPress={handleGoogleLogin}
-              disabled={GOOGLE_LOGIN_DISABLED || isLoading || isGoogleLoading}
-            >
-              {isGoogleLoading ? (
-                <ActivityIndicator color={colors.textSecondary} />
-              ) : (
-                <Text style={styles.googleButtonText}>Đăng nhập bằng Google</Text>
-              )}
-            </Pressable>
+                <Pressable
+                  style={[
+                    styles.googleButton,
+                    (isLoading || isGoogleLoading) && styles.googleButtonDisabled,
+                  ]}
+                  onPress={handleGoogleLogin}
+                  disabled={isLoading || isGoogleLoading}
+                >
+                  {isGoogleLoading ? (
+                    <ActivityIndicator color={colors.textSecondary} />
+                  ) : (
+                    <Text style={styles.googleButtonText}>Đăng nhập bằng Google</Text>
+                  )}
+                </Pressable>
+              </>
+            ) : null}
 
             <Pressable style={styles.registerCta} onPress={() => setIsRegisterVisible(true)}>
               <Text style={styles.registerCtaText}>Đăng ký</Text>

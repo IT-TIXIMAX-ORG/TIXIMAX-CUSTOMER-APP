@@ -22,12 +22,13 @@ import { useCustomerProfile } from '@/src/features/customer-portal/shared/hooks/
 import {
   addCustomerAddress,
   deleteCustomerAddress,
-  requestPhoneOtp,
+  // TODO(phone-otp): tạm tắt xác minh SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375).
+  // requestPhoneOtp,
   resendOtp,
   updateCustomerAddress,
   updateCustomerProfile,
   verifyOtp,
-  verifyPhoneOtp,
+  // verifyPhoneOtp,
 } from '@/src/features/customer-portal/shared/services/customer-portal.service';
 import { changeCurrentPassword, createLocalPassword, getReferralSaleStaff } from '@/src/features/auth/services/auth.service';
 import type { ReferralStaffOption } from '@/src/features/customer-portal/shared/types/master-data.types';
@@ -84,7 +85,11 @@ export default function AccountScreen() {
       setIsRefreshing(true);
       await refetch();
     } catch {
-      // Keep the current profile visible when refresh fails.
+      Toast.show({
+        type: 'error',
+        text1: 'Không thể làm mới',
+        text2: 'Vui lòng kiểm tra kết nối và thử lại.',
+      });
     } finally {
       setIsRefreshing(false);
     }
@@ -267,18 +272,19 @@ export default function AccountScreen() {
     }
   };
 
-  const requestPhoneVerify = async () => {
-    if (!phone.trim()) {
-      Toast.show({ type: 'error', text1: 'Vui lòng nhập số điện thoại' });
-      return;
-    }
-    await runAction(async () => requestPhoneOtp(phone.trim()), 'Đã gửi mã OTP điện thoại');
-    setModal('verify');
-  };
+  // TODO(phone-otp): tạm tắt xác minh SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375).
+  // const requestPhoneVerify = async () => {
+  //   if (!phone.trim()) {
+  //     Toast.show({ type: 'error', text1: 'Vui lòng nhập số điện thoại' });
+  //     return;
+  //   }
+  //   await runAction(async () => requestPhoneOtp(phone.trim()), 'Đã gửi mã OTP điện thoại');
+  //   setModal('verify');
+  // };
 
-  const verifyPhone = async () => {
-    await runVerifyAction(async () => verifyPhoneOtp(otp.trim()), 'Đã xác minh điện thoại');
-  };
+  // const verifyPhone = async () => {
+  //   await runVerifyAction(async () => verifyPhoneOtp(otp.trim()), 'Đã xác minh điện thoại');
+  // };
 
   const verifyEmail = async () => {
     await runVerifyAction(async () => verifyOtp(profile?.email || email, otp.trim()), 'Đã xác minh email');
@@ -362,13 +368,14 @@ export default function AccountScreen() {
       completed: Boolean(profile?.isVerify),
       action: () => setModal('verify'),
     },
-    {
-      key: 'phone',
-      title: 'Xác minh số điện thoại',
-      detail: 'Xác minh số điện thoại đang sử dụng.',
-      completed: Boolean(profile?.phoneVerified && profile?.phone?.trim()),
-      action: () => setModal('verify'),
-    },
+    // TODO(phone-otp): tạm tắt xác minh SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375).
+    // {
+    //   key: 'phone',
+    //   title: 'Xác minh số điện thoại',
+    //   detail: 'Xác minh số điện thoại đang sử dụng.',
+    //   completed: Boolean(profile?.phoneVerified && profile?.phone?.trim()),
+    //   action: () => setModal('verify'),
+    // },
     {
       key: 'address',
       title: 'Thêm ít nhất 1 địa chỉ',
@@ -377,11 +384,14 @@ export default function AccountScreen() {
       action: openAddressList,
     },
   ];
-  const completedTaskCount = profileTasks.filter((task) => task.completed).length;
-  const progressPercent = (completedTaskCount / profileTasks.length) * 100;
-  const currentLevel = progressPercent >= 100 ? 3 : progressPercent >= 75 ? 2 : 1;
+  // Cấp độ là field authoritative từ backend; FE KHÔNG tự suy ra để tránh lệch với hệ thống.
+  const currentLevel = profile?.profileCompletionLevel ?? 1;
   const levelLabel = `Level ${currentLevel}`;
+  // Checklist chỉ để hướng dẫn bước còn thiếu và thể hiện tiến độ thao tác của người dùng.
+  const completedTaskCount = profileTasks.filter((task) => task.completed).length;
+  const taskProgressPercent = Math.round((completedTaskCount / profileTasks.length) * 100);
   const nextTask = profileTasks.find((task) => !task.completed);
+  const showProgressCard = currentLevel < 3;
 
   return (
     <ScrollView
@@ -414,7 +424,7 @@ export default function AccountScreen() {
         </View>
       </View>
 
-      {progressPercent < 100 ? (
+      {showProgressCard ? (
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <View style={styles.progressContent}>
@@ -423,15 +433,15 @@ export default function AccountScreen() {
                 {completedTaskCount}/{profileTasks.length} nhiệm vụ hoàn thành • {levelLabel}
               </Text>
             </View>
-            <Text style={styles.progressPercent}>{Math.round(progressPercent)}%</Text>
+            <Text style={styles.progressPercent}>{taskProgressPercent}%</Text>
           </View>
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+            <View style={[styles.progressFill, { width: `${taskProgressPercent}%` }]} />
           </View>
           <Text style={styles.progressHint}>
             {nextTask
-              ? `Nhiệm vụ tiếp theo: ${nextTask.title}. Hệ thống sẽ tự tăng cấp khi bạn hoàn thành.`
-              : 'Bạn đã hoàn thành toàn bộ nhiệm vụ và đạt level 3.'}
+              ? `Nhiệm vụ tiếp theo: ${nextTask.title}. Hệ thống sẽ tự cập nhật cấp độ khi bạn hoàn thành.`
+              : 'Bạn đã hoàn thành các nhiệm vụ gợi ý. Hệ thống sẽ tự cập nhật cấp độ.'}
           </Text>
           <View style={styles.taskList}>
             {profileTasks.map((task) => (
@@ -556,13 +566,15 @@ export default function AccountScreen() {
 
       <ModalShell visible={modal === 'verify'} title="Xác minh tài khoản" onClose={() => setModal(null)}>
         <Text style={styles.helperText}>Email: {profile?.email || email}</Text>
-        <Text style={styles.helperText}>Điện thoại: {profile?.phone || phone}</Text>
+        {/* TODO(phone-otp): tạm ẩn dòng SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375). */}
+        {/* <Text style={styles.helperText}>Điện thoại: {profile?.phone || phone}</Text> */}
         <AppInput label="Mã OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" />
         <View style={styles.verifyActions}>
           <AppButton title="Gửi OTP email" variant="outline" onPress={resendEmailOtp} isLoading={loading} />
           <AppButton title="Xác minh email" onPress={verifyEmail} isLoading={loading} />
-          <AppButton title="Gửi OTP điện thoại" variant="outline" onPress={requestPhoneVerify} isLoading={loading} />
-          <AppButton title="Xác minh điện thoại" onPress={verifyPhone} isLoading={loading} />
+          {/* TODO(phone-otp): tạm tắt xác minh SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375). */}
+          {/* <AppButton title="Gửi OTP điện thoại" variant="outline" onPress={requestPhoneVerify} isLoading={loading} /> */}
+          {/* <AppButton title="Xác minh điện thoại" onPress={verifyPhone} isLoading={loading} /> */}
         </View>
       </ModalShell>
 
