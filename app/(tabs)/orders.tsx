@@ -359,10 +359,16 @@ export default function OrdersScreen() {
     }
 
     if (currentQuery.isError && currentItems.length === 0) {
+      const errorDetail =
+        __DEV__ && currentQuery.error instanceof Error ? currentQuery.error.message : '';
       return (
         <ErrorState
           title="Không tải được dữ liệu"
-          description="Đã có lỗi hoặc mất kết nối. Vui lòng thử lại."
+          description={
+            errorDetail
+              ? `Lỗi: ${errorDetail}`
+              : 'Đã có lỗi hoặc mất kết nối. Vui lòng thử lại.'
+          }
           onRetry={() => void currentQuery.refetch()}
           isRetrying={currentQuery.isFetching}
         />

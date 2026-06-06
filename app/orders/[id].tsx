@@ -278,7 +278,9 @@ export default function OrderDetailScreen() {
               <AppCard key={link.orderLinkId} style={styles.productCard}>
                 <View style={styles.productHeader}>
                   <View style={styles.productBadge}>
-                    <Text style={styles.productBadgeText}>{link.productTypeName || 'Chung'}</Text>
+                    <Text style={styles.productBadgeText} numberOfLines={1}>
+                      {link.productTypeName || 'Chung'}
+                    </Text>
                   </View>
                   <StatusBadge status={link.status || link.orderStatus || ''} />
                 </View>
@@ -712,11 +714,13 @@ const styles = StyleSheet.create({
   },
   productHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.sm,
     gap: spacing.md,
   },
   productBadge: {
+    flexShrink: 1,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
