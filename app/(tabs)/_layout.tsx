@@ -47,13 +47,6 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Tổng quan',
-          tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="orders"
         options={{
           title: 'Đơn hàng',
@@ -65,6 +58,13 @@ export default function TabLayout() {
         options={{
           title: 'Tạo đơn',
           tabBarIcon: ({ color }) => <TabIcon name="plus-circle" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Tổng quan',
+          tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
         }}
       />
       <Tabs.Screen
