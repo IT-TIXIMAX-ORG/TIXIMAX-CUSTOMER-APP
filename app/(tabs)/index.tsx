@@ -62,9 +62,19 @@ export default function DashboardScreen() {
   const recentTransactions = (transactionsData?.content || []).slice(0, 3);
   const displayName = profile?.name || user?.name || 'Khách hàng';
   const activeOrderCount = profile?.realtimeOrders ?? activeOrders.length;
-  const pendingPaymentCount = activeOrders.filter((order) =>
+  const pendingPaymentOrders = activeOrders.filter((order) =>
     PAYMENT_PENDING_STATUSES.has(normalizeLabelKey(order.orderStatus)),
-  ).length;
+  );
+  const pendingPaymentCount = pendingPaymentOrders.length;
+
+  // 1 đơn -> vào thẳng chi tiết; nhiều đơn -> mở danh sách (không biết mở đơn nào).
+  const goToPendingPayment = () => {
+    if (pendingPaymentCount === 1) {
+      router.push(`/orders/${pendingPaymentOrders[0].orderId}`);
+    } else {
+      router.push('/(tabs)/orders');
+    }
+  };
 
   const refreshDashboard = async () => {
     if (Platform.OS === 'web' || isRefreshing) return;
@@ -127,7 +137,7 @@ export default function DashboardScreen() {
       {pendingPaymentCount > 0 ? (
         <Pressable
           style={styles.attentionCard}
-          onPress={() => router.push('/(tabs)/orders')}
+          onPress={goToPendingPayment}
           accessibilityRole="button"
           accessibilityLabel={`${pendingPaymentCount} đơn đang chờ thanh toán, xem chi tiết`}
         >
