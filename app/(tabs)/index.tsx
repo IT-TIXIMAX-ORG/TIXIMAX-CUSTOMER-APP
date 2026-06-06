@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
   Pressable,
   Platform,
   RefreshControl,
@@ -16,17 +15,10 @@ import { Feather } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
 import { useAuthUser } from '@/src/features/auth/hooks/use-auth-store';
 import { useCustomerProfile } from '@/src/features/customer-portal/shared/hooks/use-customer-profile';
-import {
-  useCustomerActiveOrders,
-  useCustomerTransactions,
-} from '@/src/features/customer-portal/shared/hooks/use-customer-portal-data';
+import { useCustomerActiveOrders } from '@/src/features/customer-portal/shared/hooks/use-customer-portal-data';
 import { formatCurrency } from '@/src/shared/lib/utils';
 import { normalizeLabelKey } from '@/src/shared/lib/labels';
 import { StaffCard } from '@/src/components/dashboard/StaffCard';
-import { ActiveOrderCard } from '@/src/components/dashboard/ActiveOrderCard';
-import { TransactionItem } from '@/src/components/dashboard/TransactionItem';
-import { EmptyState } from '@/src/components/ui/EmptyState';
-import { ErrorState } from '@/src/components/ui/ErrorState';
 import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 
 // Các trạng thái đơn cần người dùng hành động (thanh toán) — dùng cho thẻ "Cần chú ý".
@@ -45,23 +37,10 @@ export default function DashboardScreen() {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { data: profile, refetch: refetchProfile } = useCustomerProfile();
-  const {
-    data: activeOrdersData,
-    isLoading: isOrdersLoading,
-    isError: isOrdersError,
-    refetch: refetchActiveOrders,
-  } = useCustomerActiveOrders(1, 10);
-  const {
-    data: transactionsData,
-    isLoading: isTransactionsLoading,
-    isError: isTransactionsError,
-    refetch: refetchTransactions,
-  } = useCustomerTransactions(1, 5);
+  const { data: activeOrdersData, refetch: refetchActiveOrders } = useCustomerActiveOrders(1, 10);
 
   const activeOrders = activeOrdersData?.content || [];
-  const recentTransactions = (transactionsData?.content || []).slice(0, 3);
   const displayName = profile?.name || user?.name || 'Khách hàng';
-  const activeOrderCount = profile?.realtimeOrders ?? activeOrders.length;
   const pendingPaymentOrders = activeOrders.filter((order) =>
     PAYMENT_PENDING_STATUSES.has(normalizeLabelKey(order.orderStatus)),
   );
@@ -81,7 +60,7 @@ export default function DashboardScreen() {
 
     try {
       setIsRefreshing(true);
-      await Promise.allSettled([refetchProfile(), refetchActiveOrders(), refetchTransactions()]);
+      await Promise.allSettled([refetchProfile(), refetchActiveOrders()]);
     } finally {
       setIsRefreshing(false);
     }
@@ -148,81 +127,6 @@ export default function DashboardScreen() {
           <Feather name="chevron-right" size={18} color={colors.textMuted} />
         </Pressable>
       ) : null}
-
-      {/* Đơn đang theo dõi */}
-      <View style={styles.panel}>
-        <View style={styles.panelHeader}>
-          <View style={styles.panelTitleRow}>
-            <Feather name="truck" size={18} color={colors.primaryDark} />
-            <Text style={styles.panelTitle}>Đơn đang theo dõi</Text>
-            {activeOrderCount > 0 ? (
-              <View style={styles.countChip}>
-                <Text style={styles.countChipText}>{activeOrderCount}</Text>
-              </View>
-            ) : null}
-          </View>
-          <Pressable onPress={() => router.push('/(tabs)/orders')} hitSlop={8}>
-            <Text style={styles.viewAllLink}>Xem tất cả</Text>
-          </Pressable>
-        </View>
-        <View style={styles.panelContent}>
-          {isOrdersLoading ? (
-            <ActivityIndicator style={styles.loader} color={colors.primary} />
-          ) : isOrdersError && activeOrders.length === 0 ? (
-            <ErrorState
-              title="Không tải được đơn hàng"
-              description="Đã có lỗi hoặc mất kết nối. Vui lòng thử lại."
-              onRetry={() => void refetchActiveOrders()}
-            />
-          ) : activeOrders.length === 0 ? (
-            <EmptyState
-              icon="package"
-              title="Chưa có đơn đang xử lý"
-              description="Các đơn đang mua, vận chuyển hoặc chờ thanh toán sẽ hiển thị tại đây."
-            />
-          ) : (
-            activeOrders.slice(0, 3).map((order) => (
-              <ActiveOrderCard key={order.orderId} order={order} />
-            ))
-          )}
-        </View>
-      </View>
-
-      {/* Hoạt động gần đây */}
-      <View style={styles.panel}>
-        <View style={styles.panelHeader}>
-          <View style={styles.panelTitleRow}>
-            <Feather name="activity" size={18} color={colors.primaryDark} />
-            <Text style={styles.panelTitle}>Hoạt động gần đây</Text>
-          </View>
-          <Pressable onPress={() => router.push('/(tabs)/transactions')} hitSlop={8}>
-            <Text style={styles.viewAllLink}>Xem tất cả</Text>
-          </Pressable>
-        </View>
-        <View style={styles.panelContent}>
-          {isTransactionsLoading ? (
-            <ActivityIndicator style={styles.loader} color={colors.primary} />
-          ) : isTransactionsError && recentTransactions.length === 0 ? (
-            <ErrorState
-              title="Không tải được giao dịch"
-              description="Đã có lỗi hoặc mất kết nối. Vui lòng thử lại."
-              onRetry={() => void refetchTransactions()}
-            />
-          ) : recentTransactions.length === 0 ? (
-            <EmptyState
-              icon="credit-card"
-              title="Chưa có giao dịch"
-              description="Biến động ví và thanh toán sẽ xuất hiện khi có dữ liệu."
-            />
-          ) : (
-            recentTransactions.map((tx) => (
-              <View key={tx.id} style={styles.transactionWrapper}>
-                <TransactionItem transaction={tx} />
-              </View>
-            ))
-          )}
-        </View>
-      </View>
 
       {/* Nhân viên hỗ trợ (nếu có) */}
       {profile?.dedicatedStaff ? (
@@ -350,64 +254,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: fontFamilyForWeight('700'),
     color: colors.textPrimary,
-  },
-  panel: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: borderRadius.xl,
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-  },
-  panelHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  panelTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flex: 1,
-  },
-  panelTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: '800',
-    fontFamily: fontFamilyForWeight('800'),
-    color: colors.textPrimary,
-  },
-  countChip: {
-    minWidth: 22,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 1,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-  },
-  countChipText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: '800',
-    fontFamily: fontFamilyForWeight('800'),
-    color: colors.actionText,
-  },
-  viewAllLink: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '700',
-    fontFamily: fontFamilyForWeight('700'),
-    color: colors.actionText,
-  },
-  panelContent: {
-    padding: spacing.lg,
-  },
-  loader: {
-    paddingVertical: spacing['2xl'],
-  },
-  transactionWrapper: {
-    marginBottom: spacing.md,
   },
   staffWrap: {
     marginBottom: spacing.lg,
