@@ -28,6 +28,7 @@ import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, formatDate } from '@/src/shared/lib/utils';
 import { statusLabel, transactionPurposeLabel } from '@/src/shared/lib/labels';
+import { formatTransactionAmount, isPositiveTransaction } from '@/src/features/customer-portal/shared/lib/transaction';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 
 const PURPOSE_OPTIONS = [
@@ -323,17 +324,13 @@ export default function TransactionsScreen() {
 }
 
 function TransactionDetail({ transaction }: { transaction: CustomerTransaction }) {
-  const isPositive =
-    typeof transaction.beforeBalance === 'number' && typeof transaction.afterBalance === 'number'
-      ? transaction.afterBalance - transaction.beforeBalance > 0
-      : ['INCOME', 'DEPOSIT', 'REFUND'].includes(transaction.type);
+  const isPositive = isPositiveTransaction(transaction);
 
   return (
     <View style={styles.detailContent}>
       <View style={styles.detailAmountBox}>
         <Text style={[styles.detailAmount, { color: isPositive ? colors.successText : colors.error }]}>
-          {isPositive ? '+' : '-'}
-          {formatCurrency(transaction.amount)}
+          {formatTransactionAmount(transaction)}
         </Text>
         <Text style={styles.detailPurpose}>{transactionPurposeLabel(transaction.purpose)}</Text>
       </View>

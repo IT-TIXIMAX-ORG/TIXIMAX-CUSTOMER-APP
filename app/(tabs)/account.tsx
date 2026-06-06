@@ -380,11 +380,14 @@ export default function AccountScreen() {
       action: openAddressList,
     },
   ];
-  const completedTaskCount = profileTasks.filter((task) => task.completed).length;
-  const progressPercent = (completedTaskCount / profileTasks.length) * 100;
-  const currentLevel = progressPercent >= 100 ? 3 : progressPercent >= 75 ? 2 : 1;
+  // Cấp độ là field authoritative từ backend; FE KHÔNG tự suy ra để tránh lệch với hệ thống.
+  const currentLevel = profile?.profileCompletionLevel ?? 1;
   const levelLabel = `Level ${currentLevel}`;
+  // Checklist chỉ để hướng dẫn bước còn thiếu và thể hiện tiến độ thao tác của người dùng.
+  const completedTaskCount = profileTasks.filter((task) => task.completed).length;
+  const taskProgressPercent = Math.round((completedTaskCount / profileTasks.length) * 100);
   const nextTask = profileTasks.find((task) => !task.completed);
+  const showProgressCard = currentLevel < 3;
 
   return (
     <ScrollView
@@ -417,7 +420,7 @@ export default function AccountScreen() {
         </View>
       </View>
 
-      {progressPercent < 100 ? (
+      {showProgressCard ? (
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <View style={styles.progressContent}>
@@ -426,15 +429,15 @@ export default function AccountScreen() {
                 {completedTaskCount}/{profileTasks.length} nhiệm vụ hoàn thành • {levelLabel}
               </Text>
             </View>
-            <Text style={styles.progressPercent}>{Math.round(progressPercent)}%</Text>
+            <Text style={styles.progressPercent}>{taskProgressPercent}%</Text>
           </View>
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+            <View style={[styles.progressFill, { width: `${taskProgressPercent}%` }]} />
           </View>
           <Text style={styles.progressHint}>
             {nextTask
-              ? `Nhiệm vụ tiếp theo: ${nextTask.title}. Hệ thống sẽ tự tăng cấp khi bạn hoàn thành.`
-              : 'Bạn đã hoàn thành toàn bộ nhiệm vụ và đạt level 3.'}
+              ? `Nhiệm vụ tiếp theo: ${nextTask.title}. Hệ thống sẽ tự cập nhật cấp độ khi bạn hoàn thành.`
+              : 'Bạn đã hoàn thành các nhiệm vụ gợi ý. Hệ thống sẽ tự cập nhật cấp độ.'}
           </Text>
           <View style={styles.taskList}>
             {profileTasks.map((task) => (
