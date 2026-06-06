@@ -25,6 +25,7 @@ import { StaffCard } from '@/src/components/dashboard/StaffCard';
 import { ActiveOrderCard } from '@/src/components/dashboard/ActiveOrderCard';
 import { TransactionItem } from '@/src/components/dashboard/TransactionItem';
 import { EmptyState } from '@/src/components/ui/EmptyState';
+import { ErrorState } from '@/src/components/ui/ErrorState';
 import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 
 export default function DashboardScreen() {
@@ -37,11 +38,13 @@ export default function DashboardScreen() {
   const {
     data: activeOrdersData,
     isLoading: isOrdersLoading,
+    isError: isOrdersError,
     refetch: refetchActiveOrders,
   } = useCustomerActiveOrders(1, 10);
   const {
     data: transactionsData,
     isLoading: isTransactionsLoading,
+    isError: isTransactionsError,
     refetch: refetchTransactions,
   } = useCustomerTransactions(1, 5);
 
@@ -139,6 +142,12 @@ export default function DashboardScreen() {
         <View style={styles.panelContent}>
           {isOrdersLoading ? (
             <ActivityIndicator style={styles.loader} color={colors.primary} />
+          ) : isOrdersError && activeOrders.length === 0 ? (
+            <ErrorState
+              title="Không tải được đơn hàng"
+              description="Đã có lỗi hoặc mất kết nối. Vui lòng thử lại."
+              onRetry={() => void refetchActiveOrders()}
+            />
           ) : activeOrders.length === 0 ? (
             <EmptyState
               icon="package"
@@ -168,6 +177,12 @@ export default function DashboardScreen() {
         <View style={styles.panelContent}>
           {isTransactionsLoading ? (
             <ActivityIndicator style={styles.loader} color={colors.primary} />
+          ) : isTransactionsError && transactions.length === 0 ? (
+            <ErrorState
+              title="Không tải được giao dịch"
+              description="Đã có lỗi hoặc mất kết nối. Vui lòng thử lại."
+              onRetry={() => void refetchTransactions()}
+            />
           ) : transactions.length === 0 ? (
             <EmptyState
               icon="credit-card"

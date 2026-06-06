@@ -23,6 +23,7 @@ import { TransactionItem } from '@/src/components/dashboard/TransactionItem';
 import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
 import { EmptyState } from '@/src/components/ui/EmptyState';
+import { ErrorState } from '@/src/components/ui/ErrorState';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
@@ -112,7 +113,7 @@ export default function TransactionsScreen() {
     [dateFrom, dateTo, keyword, purpose],
   );
 
-  const { data, isLoading, isFetching } = useCustomerTransactions(page, pageSize, query);
+  const { data, isLoading, isFetching, isError, refetch } = useCustomerTransactions(page, pageSize, query);
 
   useEffect(() => {
     if (!data?.content) return;
@@ -255,6 +256,17 @@ export default function TransactionsScreen() {
   const renderEmpty = () => {
     if (isLoading) {
       return <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />;
+    }
+
+    if (isError && items.length === 0) {
+      return (
+        <ErrorState
+          title="Không tải được giao dịch"
+          description="Đã có lỗi hoặc mất kết nối. Vui lòng thử lại."
+          onRetry={() => void refetch()}
+          isRetrying={isFetching}
+        />
+      );
     }
 
     return (

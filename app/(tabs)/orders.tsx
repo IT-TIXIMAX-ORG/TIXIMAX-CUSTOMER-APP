@@ -41,6 +41,7 @@ import { OrderListItem } from '@/src/components/orders/OrderListItem';
 import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
 import { EmptyState } from '@/src/components/ui/EmptyState';
+import { ErrorState } from '@/src/components/ui/ErrorState';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
@@ -355,6 +356,17 @@ export default function OrdersScreen() {
   const renderEmpty = () => {
     if (currentQuery.isLoading) {
       return <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />;
+    }
+
+    if (currentQuery.isError && currentItems.length === 0) {
+      return (
+        <ErrorState
+          title="Không tải được dữ liệu"
+          description="Đã có lỗi hoặc mất kết nối. Vui lòng thử lại."
+          onRetry={() => void currentQuery.refetch()}
+          isRetrying={currentQuery.isFetching}
+        />
+      );
     }
 
     return (
