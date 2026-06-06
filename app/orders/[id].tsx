@@ -1,5 +1,16 @@
 import { useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -12,7 +23,14 @@ import { StatusBadge } from '@/src/components/ui/StatusBadge';
 import { formatCurrency, formatDate, formatWeight } from '@/src/shared/lib/utils';
 import { AppCard } from '@/src/components/ui/AppCard';
 import { EmptyState } from '@/src/components/ui/EmptyState';
-import { humanizeEnum, orderLogActionLabel, orderTypeLabel, transactionPurposeLabel } from '@/src/shared/lib/labels';
+import {
+  humanizeEnum,
+  normalizeLabelKey,
+  orderLogActionLabel,
+  orderTypeLabel,
+  transactionPurposeLabel,
+} from '@/src/shared/lib/labels';
+import type { CustomerPaymentSession } from '@/src/features/customer-portal/shared/types/customer-portal.types';
 
 const normalizeImageUrl = (value?: string | null) => {
   const url = value?.trim();
@@ -22,14 +40,32 @@ const normalizeImageUrl = (value?: string | null) => {
   return `${ENV_CONFIG.apiBaseUrl.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
 };
 
+// Đợt thanh toán coi như đã xong / không cần thao tác (để thu gọn).
+const NON_PENDING_PAYMENT_KEYS = ['DA_THANH_TOAN', 'SUCCESS', 'COMPLETED', 'FAILED', 'CANCELLED', 'DA_HUY', 'YEU_CAU_HUY'];
+const isPendingSession = (status?: string | null) => !NON_PENDING_PAYMENT_KEYS.includes(normalizeLabelKey(status));
+const sessionKey = (session: CustomerPaymentSession, index: number) =>
+  String(session.paymentId || session.id || session.paymentCode || index);
+
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams();
   const orderId = String(id || '');
-  const { data: order, isFetching, isLoading, refetch } = useCustomerOrderDetail(orderId);
+  const { data: order, isLoading, refetch } = useCustomerOrderDetail(orderId);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [selectedImageError, setSelectedImageError] = useState(false);
-  const reloadOrder = () => {
-    void refetch();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [timelineExpanded, setTimelineExpanded] = useState(false);
+  const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
+  const toggleSession = (key: string) =>
+    setExpandedSessions((prev) => ({ ...prev, [key]: !prev[key] }));
+  const refreshOrder = async () => {
+    if (Platform.OS === 'web' || isRefreshing) return;
+
+    try {
+      setIsRefreshing(true);
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
   };
   const openImage = (url: string) => {
     setSelectedImageError(false);
@@ -50,11 +86,24 @@ export default function OrderDetailScreen() {
 
   if (!order) {
     return (
-      <View style={styles.centerContainer}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.centerContent}
+        refreshControl={
+          Platform.OS !== 'web' ? (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => void refreshOrder()}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          ) : undefined
+        }
+      >
         <Feather name="alert-circle" size={48} color={colors.textMuted} />
         <Text style={styles.errorText}>Không tìm thấy đơn hàng</Text>
-        <ReloadButton isFetching={isFetching} onPress={reloadOrder} style={styles.centerReloadButton} />
-      </View>
+        <Text style={styles.errorHint}>Vuốt xuống để tải lại</Text>
+      </ScrollView>
     );
   }
 
@@ -80,13 +129,55 @@ export default function OrderDetailScreen() {
     ),
   );
 
+  // Số tiền cần trả NGAY của đợt đang chờ — tính tại FE từ data có sẵn (không cần BE).
+  const productOutstanding = order.productPayment
+    ? (order.productPayment.outstandingAmountVnd ??
+        Math.max((order.productPayment.expectedAmountVnd ?? 0) - (order.productPayment.paidAmountVnd ?? 0), 0))
+    : 0;
+  const shippingOutstanding = order.shippingPayment
+    ? (order.shippingPayment.outstandingAmountVnd ??
+        Math.max((order.shippingPayment.expectedAmountVnd ?? 0) - (order.shippingPayment.paidAmountVnd ?? 0), 0))
+    : 0;
+  const productPaid = order.productPayment?.isPaid ?? productOutstanding <= 0;
+  const shippingPaid = order.shippingPayment?.isPaid ?? shippingOutstanding <= 0;
+  const hasPaymentInfo = Boolean(order.productPayment || order.shippingPayment);
+  const isCancelled = ['CANCELLED', 'DA_HUY', 'YEU_CAU_HUY', 'FAILED'].includes(normalizeLabelKey(order.status));
+
+  let payNow = 0;
+  let payNowLabel = 'Số tiền cần thanh toán';
+  if (!isCancelled && !productPaid && productOutstanding > 0) {
+    payNow = productOutstanding;
+    payNowLabel = 'Cần thanh toán tiền hàng';
+  } else if (!isCancelled && !shippingPaid && shippingOutstanding > 0) {
+    payNow = shippingOutstanding;
+    payNowLabel = 'Cần thanh toán phí vận chuyển';
+  }
+  const hasPayNow = payNow > 0;
+
+  // QR theo ngữ cảnh: đợt đang chờ hiện đầy đủ, đợt đã xong thu gọn.
+  const pendingSessions = paymentSessions.filter((session) => isPendingSession(session.status));
+  const settledSessions = paymentSessions.filter((session) => !isPendingSession(session.status));
+
+  // Hành trình: mặc định 2 bước mới nhất, có nút mở rộng.
+  const reversedLogs = [...(order.processLogs ?? [])].reverse();
+  const visibleLogs = timelineExpanded || reversedLogs.length <= 2 ? reversedLogs : reversedLogs.slice(0, 2);
+
   return (
     <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.topActions}>
-          <ReloadButton isFetching={isFetching} onPress={reloadOrder} />
-        </View>
-
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          Platform.OS !== 'web' ? (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => void refreshOrder()}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          ) : undefined
+        }
+      >
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text style={styles.orderCode}>{order.orderCode}</Text>
@@ -96,8 +187,30 @@ export default function OrderDetailScreen() {
             {orderTypeLabel(order.orderType)} • {formatDate(order.createdAt)}
           </Text>
           <View style={styles.totalContainer}>
-            <Text style={styles.totalLabel}>Tổng giá trị đơn hàng</Text>
-            <Text style={styles.totalValue}>{formatCurrency(expectedAmountVnd)}</Text>
+            {hasPayNow ? (
+              <>
+                <Text style={styles.payNowLabel}>{payNowLabel}</Text>
+                <Text style={styles.payNowValue}>{formatCurrency(payNow)}</Text>
+                <Text style={styles.totalHint}>Tổng giá trị đơn: {formatCurrency(expectedAmountVnd)}</Text>
+              </>
+            ) : isCancelled ? (
+              <>
+                <Text style={styles.totalLabel}>Trạng thái</Text>
+                <Text style={styles.paidValue}>Đơn đã hủy</Text>
+                <Text style={styles.totalHint}>Tổng giá trị đơn: {formatCurrency(expectedAmountVnd)}</Text>
+              </>
+            ) : hasPaymentInfo ? (
+              <>
+                <Text style={styles.totalLabel}>Thanh toán</Text>
+                <Text style={styles.paidValue}>Đã thanh toán đủ</Text>
+                <Text style={styles.totalHint}>Tổng giá trị đơn: {formatCurrency(expectedAmountVnd)}</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.totalLabel}>Tổng giá trị đơn hàng</Text>
+                <Text style={styles.totalMainValue}>{formatCurrency(expectedAmountVnd)}</Text>
+              </>
+            )}
           </View>
         </View>
 
@@ -112,44 +225,42 @@ export default function OrderDetailScreen() {
             <InfoRow label="Phụ thu sản phẩm" value={formatCurrency(order.orderLinks.reduce((sum, link) => sum + (link.extraCharge ?? 0), 0))} />
           </AppCard>
 
-          {paymentSessions.length ? (
-            paymentSessions.map((session, index) => {
-              return (
-                <AppCard key={`${session.paymentId || session.id || index}`} style={styles.qrCard}>
-                  <View style={styles.qrHeader}>
-                    <View>
-                      <Text style={styles.qrTitle}>{transactionPurposeLabel(session.purpose || session.paymentType)}</Text>
-                    </View>
-                    <StatusBadge status={session.status} />
-                  </View>
-                  {session.qrCode ? (
-                    <Image source={{ uri: session.qrCode }} style={styles.qrImage} resizeMode="contain" />
-                  ) : null}
-                  {session.content ? (
-                    <Pressable
-                      style={styles.copyBox}
-                      onPress={async () => {
-                        await Clipboard.setStringAsync(session.content || '');
-                        Toast.show({ type: 'success', text1: 'Đã copy nội dung chuyển khoản' });
-                      }}
-                    >
-                      <Text style={styles.copyText}>{session.content}</Text>
-                      <Feather name="copy" size={14} color={colors.primaryDark} />
-                    </Pressable>
-                  ) : null}
-                  {session.bankAccount ? (
-                    <View style={styles.bankBox}>
-                      <InfoRow label="Ngân hàng" value={session.bankAccount.bankName} />
-                      <InfoRow label="Số tài khoản" value={session.bankAccount.accountNumber} />
-                      <InfoRow label="Chủ tài khoản" value={session.bankAccount.accountHolder} />
-                    </View>
-                  ) : null}
-                </AppCard>
-              );
-            })
+          {pendingSessions.length ? (
+            pendingSessions.map((session, index) => (
+              <PaymentSessionCard key={sessionKey(session, index)} session={session} />
+            ))
           ) : (
-            <Text style={styles.mutedText}>Chưa có phiên thanh toán đang chờ.</Text>
+            <Text style={styles.mutedText}>Không có khoản cần thanh toán.</Text>
           )}
+
+          {settledSessions.length ? (
+            <View style={styles.settledGroup}>
+              <Text style={styles.settledHeader}>Đợt đã thanh toán</Text>
+              {settledSessions.map((session, index) => {
+                const key = sessionKey(session, index);
+                const expanded = Boolean(expandedSessions[key]);
+                return (
+                  <View key={key}>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => toggleSession(key)}
+                      style={({ pressed }) => [styles.settledRow, pressed && styles.imagePressed]}
+                    >
+                      <Text style={styles.settledTitle} numberOfLines={1}>
+                        {transactionPurposeLabel(session.purpose || session.paymentType)}
+                      </Text>
+                      {session.amount ? (
+                        <Text style={styles.settledAmount}>{formatCurrency(session.amount)}</Text>
+                      ) : null}
+                      <StatusBadge status={session.status} />
+                      <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+                    </Pressable>
+                    {expanded ? <PaymentSessionCard session={session} /> : null}
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
         </Section>
 
         <Section title={`Sản phẩm (${order.orderLinks.length})`} icon="shopping-bag">
@@ -177,9 +288,13 @@ export default function OrderDetailScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`Xem ảnh ${link.productName || 'sản phẩm'}`}
                     onPress={() => openImage(productImageUrl)}
-                    style={({ pressed }) => [styles.productImageButton, pressed && styles.imagePressed]}
+                    style={({ pressed }) => [styles.thumbRow, pressed && styles.imagePressed]}
                   >
-                    <Image source={{ uri: productImageUrl }} style={styles.productImage} />
+                    <Image source={{ uri: productImageUrl }} style={styles.thumbImage} />
+                    <View style={styles.thumbHint}>
+                      <Feather name="maximize-2" size={14} color={colors.primaryDark} />
+                      <Text style={styles.thumbHintText}>Xem ảnh chi tiết</Text>
+                    </View>
                   </Pressable>
                 ) : null}
                 <InfoRow label="Số lượng" value={String(link.quantity ?? '---')} />
@@ -243,29 +358,43 @@ export default function OrderDetailScreen() {
 
         <Section title="Hành trình đơn hàng" icon="clock">
           <AppCard style={styles.journeyCard}>
-            {!order.processLogs || order.processLogs.length === 0 ? (
+            {reversedLogs.length === 0 ? (
               <EmptyState icon="clock" title="Chưa có cập nhật" />
             ) : (
-              [...order.processLogs].reverse().map((log, i, arr) => {
-                const isLast = i === arr.length - 1;
-                const isFirst = i === 0;
-                return (
-                  <View key={log.logId} style={styles.timelineItem}>
-                    <View style={styles.timelineLeft}>
-                      <View style={[styles.timelineDot, isFirst && styles.timelineDotActive]} />
-                      {!isLast && <View style={styles.timelineLine} />}
+              <>
+                {visibleLogs.map((log, i, arr) => {
+                  const isLast = i === arr.length - 1;
+                  const isFirst = i === 0;
+                  return (
+                    <View key={log.logId} style={styles.timelineItem}>
+                      <View style={styles.timelineLeft}>
+                        <View style={[styles.timelineDot, isFirst && styles.timelineDotActive]} />
+                        {!isLast && <View style={styles.timelineLine} />}
+                      </View>
+                      <View style={styles.timelineContent}>
+                        <Text style={[styles.timelineAction, isFirst && styles.timelineActionActive]}>
+                          {orderLogActionLabel(log.action)}
+                        </Text>
+                        <Text style={styles.timelineDate}>{formatDate(log.createdAt)}</Text>
+                        {log.note ? <Text style={styles.timelineNote}>{log.note}</Text> : null}
+                        {log.actionCode ? <Text style={styles.timelineCode}>{log.actionCode}</Text> : null}
+                      </View>
                     </View>
-                    <View style={styles.timelineContent}>
-                      <Text style={[styles.timelineAction, isFirst && styles.timelineActionActive]}>
-                        {orderLogActionLabel(log.action)}
-                      </Text>
-                      <Text style={styles.timelineDate}>{formatDate(log.createdAt)}</Text>
-                      {log.note ? <Text style={styles.timelineNote}>{log.note}</Text> : null}
-                      {log.actionCode ? <Text style={styles.timelineCode}>{log.actionCode}</Text> : null}
-                    </View>
-                  </View>
-                );
-              })
+                  );
+                })}
+                {reversedLogs.length > 2 ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setTimelineExpanded((prev) => !prev)}
+                    style={({ pressed }) => [styles.timelineToggle, pressed && styles.imagePressed]}
+                  >
+                    <Text style={styles.timelineToggleText}>
+                      {timelineExpanded ? 'Thu gọn' : `Xem toàn bộ hành trình (${reversedLogs.length} bước)`}
+                    </Text>
+                    <Feather name={timelineExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.primaryDark} />
+                  </Pressable>
+                ) : null}
+              </>
             )}
           </AppCard>
         </Section>
@@ -334,33 +463,38 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ReloadButton({
-  isFetching,
-  onPress,
-  style,
-}: {
-  isFetching: boolean;
-  onPress: () => void;
-  style?: object;
-}) {
+function PaymentSessionCard({ session }: { session: CustomerPaymentSession }) {
   return (
-    <Pressable
-      disabled={isFetching}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.reloadButton,
-        style,
-        pressed && styles.reloadButtonPressed,
-        isFetching && styles.reloadButtonDisabled,
-      ]}
-    >
-      {isFetching ? (
-        <ActivityIndicator size="small" color={colors.primaryDark} />
-      ) : (
-        <Feather name="refresh-cw" size={16} color={colors.primaryDark} />
-      )}
-      <Text style={styles.reloadText}>{isFetching ? 'Đang tải' : 'Tải lại'}</Text>
-    </Pressable>
+    <AppCard style={styles.qrCard}>
+      <View style={styles.qrHeader}>
+        <View>
+          <Text style={styles.qrTitle}>{transactionPurposeLabel(session.purpose || session.paymentType)}</Text>
+        </View>
+        <StatusBadge status={session.status} />
+      </View>
+      {session.qrCode ? (
+        <Image source={{ uri: session.qrCode }} style={styles.qrImage} resizeMode="contain" />
+      ) : null}
+      {session.content ? (
+        <Pressable
+          style={styles.copyBox}
+          onPress={async () => {
+            await Clipboard.setStringAsync(session.content || '');
+            Toast.show({ type: 'success', text1: 'Đã copy nội dung chuyển khoản' });
+          }}
+        >
+          <Text style={styles.copyText}>{session.content}</Text>
+          <Feather name="copy" size={14} color={colors.primaryDark} />
+        </Pressable>
+      ) : null}
+      {session.bankAccount ? (
+        <View style={styles.bankBox}>
+          <InfoRow label="Ngân hàng" value={session.bankAccount.bankName} />
+          <InfoRow label="Số tài khoản" value={session.bankAccount.accountNumber} />
+          <InfoRow label="Chủ tài khoản" value={session.bankAccount.accountHolder} />
+        </View>
+      ) : null}
+    </AppCard>
   );
 }
 
@@ -371,6 +505,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.background,
   },
+  centerContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
   errorText: {
     marginTop: spacing.md,
     fontSize: typography.fontSize.base,
@@ -378,8 +518,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: fontFamilyForWeight('700'),
   },
-  centerReloadButton: {
-    marginTop: spacing.lg,
+  errorHint: {
+    marginTop: spacing.sm,
+    fontSize: typography.fontSize.sm,
+    color: colors.textMuted,
+    fontWeight: '700',
+    fontFamily: fontFamilyForWeight('700'),
   },
   container: {
     flex: 1,
@@ -389,35 +533,6 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     paddingTop: spacing['3xl'],
     paddingBottom: spacing['4xl'],
-  },
-  topActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: spacing.md,
-  },
-  reloadButton: {
-    minHeight: 36,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.primaryBorder,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  reloadButtonPressed: {
-    opacity: 0.75,
-  },
-  reloadButtonDisabled: {
-    opacity: 0.7,
-  },
-  reloadText: {
-    color: colors.primaryDark,
-    fontSize: typography.fontSize.sm,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
   },
   header: {
     backgroundColor: colors.surface,
@@ -462,11 +577,38 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     textTransform: 'uppercase',
   },
-  totalValue: {
+  payNowLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    fontFamily: fontFamilyForWeight('900'),
+    color: colors.warning,
+    marginBottom: spacing.xs,
+    textTransform: 'uppercase',
+  },
+  payNowValue: {
+    fontSize: typography.fontSize['3xl'],
+    fontWeight: '900',
+    fontFamily: fontFamilyForWeight('900'),
+    color: colors.warning,
+  },
+  paidValue: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: '900',
+    fontFamily: fontFamilyForWeight('900'),
+    color: colors.successText,
+  },
+  totalMainValue: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: '900',
     fontFamily: fontFamilyForWeight('900'),
     color: colors.primaryDark,
+  },
+  totalHint: {
+    marginTop: spacing.xs,
+    fontSize: typography.fontSize.xs,
+    fontWeight: '700',
+    fontFamily: fontFamilyForWeight('700'),
+    color: colors.textSecondary,
   },
   section: {
     marginBottom: spacing.xl,
@@ -528,6 +670,43 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderLight,
     paddingTop: spacing.sm,
   },
+  settledGroup: {
+    marginTop: spacing.xs,
+  },
+  settledHeader: {
+    fontSize: 10,
+    fontWeight: '900',
+    fontFamily: fontFamilyForWeight('900'),
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
+  },
+  settledRow: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  settledTitle: {
+    flex: 1,
+    fontSize: typography.fontSize.sm,
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
+    color: colors.textPrimary,
+  },
+  settledAmount: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: '900',
+    fontFamily: fontFamilyForWeight('900'),
+    color: colors.textSecondary,
+  },
   productCard: {
     marginBottom: spacing.md,
   },
@@ -557,15 +736,28 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.md,
   },
-  productImageButton: {
-    borderRadius: borderRadius.md,
+  thumbRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     marginBottom: spacing.md,
-    overflow: 'hidden',
   },
-  productImage: {
-    width: '100%',
-    height: 180,
+  thumbImage: {
+    width: 64,
+    height: 64,
+    borderRadius: borderRadius.md,
     backgroundColor: colors.background,
+  },
+  thumbHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  thumbHintText: {
+    color: colors.primaryDark,
+    fontSize: typography.fontSize.sm,
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
   },
   imagePressed: {
     opacity: 0.75,
@@ -714,5 +906,21 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontFamily: fontFamilyForWeight('900'),
     fontSize: typography.fontSize.xs,
+  },
+  timelineToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  timelineToggleText: {
+    color: colors.primaryDark,
+    fontSize: typography.fontSize.sm,
+    fontWeight: '900',
+    fontFamily: fontFamilyForWeight('900'),
   },
 });

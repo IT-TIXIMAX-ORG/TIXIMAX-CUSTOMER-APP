@@ -22,12 +22,13 @@ import { useCustomerProfile } from '@/src/features/customer-portal/shared/hooks/
 import {
   addCustomerAddress,
   deleteCustomerAddress,
-  requestPhoneOtp,
+  // TODO(phone-otp): tạm tắt xác minh SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375).
+  // requestPhoneOtp,
   resendOtp,
   updateCustomerAddress,
   updateCustomerProfile,
   verifyOtp,
-  verifyPhoneOtp,
+  // verifyPhoneOtp,
 } from '@/src/features/customer-portal/shared/services/customer-portal.service';
 import { changeCurrentPassword, createLocalPassword, getReferralSaleStaff } from '@/src/features/auth/services/auth.service';
 import type { ReferralStaffOption } from '@/src/features/customer-portal/shared/types/master-data.types';
@@ -267,18 +268,19 @@ export default function AccountScreen() {
     }
   };
 
-  const requestPhoneVerify = async () => {
-    if (!phone.trim()) {
-      Toast.show({ type: 'error', text1: 'Vui lòng nhập số điện thoại' });
-      return;
-    }
-    await runAction(async () => requestPhoneOtp(phone.trim()), 'Đã gửi mã OTP điện thoại');
-    setModal('verify');
-  };
+  // TODO(phone-otp): tạm tắt xác minh SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375).
+  // const requestPhoneVerify = async () => {
+  //   if (!phone.trim()) {
+  //     Toast.show({ type: 'error', text1: 'Vui lòng nhập số điện thoại' });
+  //     return;
+  //   }
+  //   await runAction(async () => requestPhoneOtp(phone.trim()), 'Đã gửi mã OTP điện thoại');
+  //   setModal('verify');
+  // };
 
-  const verifyPhone = async () => {
-    await runVerifyAction(async () => verifyPhoneOtp(otp.trim()), 'Đã xác minh điện thoại');
-  };
+  // const verifyPhone = async () => {
+  //   await runVerifyAction(async () => verifyPhoneOtp(otp.trim()), 'Đã xác minh điện thoại');
+  // };
 
   const verifyEmail = async () => {
     await runVerifyAction(async () => verifyOtp(profile?.email || email, otp.trim()), 'Đã xác minh email');
@@ -362,13 +364,14 @@ export default function AccountScreen() {
       completed: Boolean(profile?.isVerify),
       action: () => setModal('verify'),
     },
-    {
-      key: 'phone',
-      title: 'Xác minh số điện thoại',
-      detail: 'Xác minh số điện thoại đang sử dụng.',
-      completed: Boolean(profile?.phoneVerified && profile?.phone?.trim()),
-      action: () => setModal('verify'),
-    },
+    // TODO(phone-otp): tạm tắt xác minh SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375).
+    // {
+    //   key: 'phone',
+    //   title: 'Xác minh số điện thoại',
+    //   detail: 'Xác minh số điện thoại đang sử dụng.',
+    //   completed: Boolean(profile?.phoneVerified && profile?.phone?.trim()),
+    //   action: () => setModal('verify'),
+    // },
     {
       key: 'address',
       title: 'Thêm ít nhất 1 địa chỉ',
@@ -556,13 +559,15 @@ export default function AccountScreen() {
 
       <ModalShell visible={modal === 'verify'} title="Xác minh tài khoản" onClose={() => setModal(null)}>
         <Text style={styles.helperText}>Email: {profile?.email || email}</Text>
-        <Text style={styles.helperText}>Điện thoại: {profile?.phone || phone}</Text>
+        {/* TODO(phone-otp): tạm ẩn dòng SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375). */}
+        {/* <Text style={styles.helperText}>Điện thoại: {profile?.phone || phone}</Text> */}
         <AppInput label="Mã OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" />
         <View style={styles.verifyActions}>
           <AppButton title="Gửi OTP email" variant="outline" onPress={resendEmailOtp} isLoading={loading} />
           <AppButton title="Xác minh email" onPress={verifyEmail} isLoading={loading} />
-          <AppButton title="Gửi OTP điện thoại" variant="outline" onPress={requestPhoneVerify} isLoading={loading} />
-          <AppButton title="Xác minh điện thoại" onPress={verifyPhone} isLoading={loading} />
+          {/* TODO(phone-otp): tạm tắt xác minh SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375). */}
+          {/* <AppButton title="Gửi OTP điện thoại" variant="outline" onPress={requestPhoneVerify} isLoading={loading} /> */}
+          {/* <AppButton title="Xác minh điện thoại" onPress={verifyPhone} isLoading={loading} /> */}
         </View>
       </ModalShell>
 
