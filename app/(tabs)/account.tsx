@@ -85,7 +85,11 @@ export default function AccountScreen() {
       setIsRefreshing(true);
       await refetch();
     } catch {
-      // Keep the current profile visible when refresh fails.
+      Toast.show({
+        type: 'error',
+        text1: 'Không thể làm mới',
+        text2: 'Vui lòng kiểm tra kết nối và thử lại.',
+      });
     } finally {
       setIsRefreshing(false);
     }
