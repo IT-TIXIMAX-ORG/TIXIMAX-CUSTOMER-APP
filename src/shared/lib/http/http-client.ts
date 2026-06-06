@@ -26,7 +26,9 @@ const createJsonClient = () =>
     headers: {
       'Content-Type': 'application/json',
     },
-    timeout: 300000,
+    // 30s cho request JSON thông thường. Upload ảnh dùng fetch riêng (upload-image.service.ts)
+    // nên không bị giới hạn bởi timeout này.
+    timeout: 30000,
   });
 
 const toRecord = (value: unknown): Record<string, unknown> => {

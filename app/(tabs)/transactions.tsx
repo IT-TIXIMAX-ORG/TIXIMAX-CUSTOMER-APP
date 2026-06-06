@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
 import { useCustomerTransactions } from '@/src/features/customer-portal/shared/hooks/use-customer-portal-data';
@@ -23,11 +24,13 @@ import { TransactionItem } from '@/src/components/dashboard/TransactionItem';
 import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
 import { EmptyState } from '@/src/components/ui/EmptyState';
+import { ErrorState } from '@/src/components/ui/ErrorState';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, formatDate } from '@/src/shared/lib/utils';
 import { statusLabel, transactionPurposeLabel } from '@/src/shared/lib/labels';
+import { formatTransactionAmount, isPositiveTransaction } from '@/src/features/customer-portal/shared/lib/transaction';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 
 const PURPOSE_OPTIONS = [
@@ -111,7 +114,7 @@ export default function TransactionsScreen() {
     [dateFrom, dateTo, keyword, purpose],
   );
 
-  const { data, isLoading, isFetching } = useCustomerTransactions(page, pageSize, query);
+  const { data, isLoading, isFetching, isError, refetch } = useCustomerTransactions(page, pageSize, query);
 
   useEffect(() => {
     if (!data?.content) return;
@@ -212,7 +215,11 @@ export default function TransactionsScreen() {
       setPage(1);
       setItems(refreshed.content);
     } catch {
-      // Keep the current list visible when refresh fails.
+      Toast.show({
+        type: 'error',
+        text1: 'Không thể làm mới',
+        text2: 'Vui lòng kiểm tra kết nối và thử lại.',
+      });
     } finally {
       setIsRefreshing(false);
     }
@@ -254,6 +261,17 @@ export default function TransactionsScreen() {
   const renderEmpty = () => {
     if (isLoading) {
       return <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />;
+    }
+
+    if (isError && items.length === 0) {
+      return (
+        <ErrorState
+          title="Không tải được giao dịch"
+          description="Đã có lỗi hoặc mất kết nối. Vui lòng thử lại."
+          onRetry={() => void refetch()}
+          isRetrying={isFetching}
+        />
+      );
     }
 
     return (
@@ -323,17 +341,13 @@ export default function TransactionsScreen() {
 }
 
 function TransactionDetail({ transaction }: { transaction: CustomerTransaction }) {
-  const isPositive =
-    typeof transaction.beforeBalance === 'number' && typeof transaction.afterBalance === 'number'
-      ? transaction.afterBalance - transaction.beforeBalance > 0
-      : ['INCOME', 'DEPOSIT', 'REFUND'].includes(transaction.type);
+  const isPositive = isPositiveTransaction(transaction);
 
   return (
     <View style={styles.detailContent}>
       <View style={styles.detailAmountBox}>
         <Text style={[styles.detailAmount, { color: isPositive ? colors.successText : colors.error }]}>
-          {isPositive ? '+' : '-'}
-          {formatCurrency(transaction.amount)}
+          {formatTransactionAmount(transaction)}
         </Text>
         <Text style={styles.detailPurpose}>{transactionPurposeLabel(transaction.purpose)}</Text>
       </View>
