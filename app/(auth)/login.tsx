@@ -471,7 +471,7 @@ export default function LoginScreen() {
         <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image
-                source={require('../../assets/app-icons/TIXIMAX-icon.jpg')}
+                source={require('../../assets/app-icons/TIXIMAX-icon.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
