@@ -221,7 +221,8 @@ export default function OrderDetailScreen() {
     );
   }
 
-  const expectedAmountVnd = order.finalPriceOrder ?? order.productPayment?.expectedAmountVnd ?? 0;
+  // totalOrderValue = tổng giá trị đơn hàng (finalPriceOrder là source of truth cho tất cả display)
+  const totalOrderValue = order.finalPriceOrder ?? order.productPayment?.expectedAmountVnd ?? 0;
 
   // Khi đơn đang chờ thanh toán tiền hàng, backend đôi khi trả paidAmountVnd sai → bắt buộc = 0.
   const isWaitingForProductPayment = ['CHO_THANH_TOAN', 'CHO_THANH_TOAN_DAU_GIA', 'CHUA_THANH_TOAN', 'WAITING_FOR_PAYMENT', 'PENDING'].includes(normalizeLabelKey(order.status));
@@ -306,7 +307,7 @@ export default function OrderDetailScreen() {
   let payNow = 0;
   let payNowLabel = 'Số tiền cần thanh toán';
   if (!isCancelled && !resolvedProductPaid && productOutstanding > 0) {
-    payNow = productOutstanding;
+    payNow = totalOrderValue;
     payNowLabel = 'Cần thanh toán tiền hàng';
   } else if (!isCancelled && !resolvedShippingPaid && shippingOutstanding > 0) {
     payNow = shippingOutstanding;
@@ -356,35 +357,35 @@ export default function OrderDetailScreen() {
               <>
                 <Text style={styles.payNowLabel}>{payNowLabel}</Text>
                 <Text style={styles.payNowValue}>{formatCurrency(payNow)}</Text>
-                <Text style={styles.totalHint}>Tổng giá trị đơn: {formatCurrency(expectedAmountVnd)}</Text>
+                <Text style={styles.totalHint}>Tổng giá trị đơn: {formatCurrency(totalOrderValue)}</Text>
               </>
             ) : isCancelled ? (
               <>
                 <Text style={styles.totalLabel}>Trạng thái</Text>
                 <Text style={styles.paidValue}>Đơn đã hủy</Text>
-                <Text style={styles.totalHint}>Tổng giá trị đơn: {formatCurrency(expectedAmountVnd)}</Text>
+                <Text style={styles.totalHint}>Tổng giá trị đơn: {formatCurrency(totalOrderValue)}</Text>
               </>
             ) : productPaid && shippingPaid ? (
               <>
                 <Text style={styles.totalLabel}>Thanh toán</Text>
                 <Text style={styles.paidValue}>Thanh toán hoàn tất</Text>
-                <Text style={styles.totalHint}>Tổng giá trị đơn: {formatCurrency(expectedAmountVnd)}</Text>
+                <Text style={styles.totalHint}>Tổng giá trị đơn: {formatCurrency(totalOrderValue)}</Text>
               </>
             ) : productPaid ? (
               <>
                 <Text style={styles.totalLabel}>Thanh toán</Text>
                 <Text style={styles.paidValue2}>Tiền hàng đã trả · Chờ phí vận chuyển</Text>
-                <Text style={styles.totalHint}>Tổng giá trị đơn: {formatCurrency(expectedAmountVnd)}</Text>
+                <Text style={styles.totalHint}>Tổng giá trị đơn: {formatCurrency(totalOrderValue)}</Text>
               </>
             ) : hasPaymentInfo ? (
               <>
                 <Text style={styles.totalLabel}>Tổng giá trị đơn hàng</Text>
-                <Text style={styles.totalMainValue}>{formatCurrency(expectedAmountVnd)}</Text>
+                <Text style={styles.totalMainValue}>{formatCurrency(totalOrderValue)}</Text>
               </>
             ) : (
               <>
                 <Text style={styles.totalLabel}>Tổng giá trị đơn hàng</Text>
-                <Text style={styles.totalMainValue}>{formatCurrency(expectedAmountVnd)}</Text>
+                <Text style={styles.totalMainValue}>{formatCurrency(totalOrderValue)}</Text>
               </>
             )}
           </View>
@@ -415,13 +416,12 @@ export default function OrderDetailScreen() {
 
         <Section title="Thanh toán" icon="credit-card">
           <AppCard style={styles.paymentSummary}>
-            <InfoRow label="Tiền hàng dự kiến" value={formatCurrency(expectedAmountVnd)} />
+            <InfoRow label="Tiền hàng dự kiến" value={formatCurrency(totalOrderValue)} />
             <InfoRow label="Đã thanh toán tiền hàng" value={formatCurrency(paidProductAmount)} />
             <InfoRow label="Phí vận chuyển dự kiến" value={formatCurrency(shippingAmountVnd)} />
             {order.orderType === 'DAU_GIA' && order.paymentAfterAuction ? (
               <InfoRow label="Thanh toán sau đấu giá" value={formatCurrency(order.paymentAfterAuction)} />
             ) : null}
-            <InfoRow label="Phụ thu sản phẩm" value={formatCurrency(order.orderLinks.reduce((sum, link) => sum + (link.extraCharge ?? 0), 0))} />
           </AppCard>
 
 
@@ -568,10 +568,10 @@ export default function OrderDetailScreen() {
                   </Pressable>
                 ) : null}
                 <InfoRow label="Số lượng" value={String(link.quantity ?? '---')} />
-                <InfoRow label="Giá web" value={`${link.priceWeb ?? 0}${routeCurrency ? ` ${routeCurrency}` : ''}`} />
-                <InfoRow label="Ship web" value={formatCurrency(link.shipWeb ?? 0)} />
-                <InfoRow label="Thành tiền" value={formatCurrency(link.finalPriceVnd ?? 0)} />
+                <InfoRow label="Giá web" value={`${new Intl.NumberFormat('vi-VN').format(link.priceWeb ?? 0)}${routeCurrency ? ` ${routeCurrency}` : ''}`} />
+                <InfoRow label="Ship web" value={`${new Intl.NumberFormat('vi-VN').format(link.shipWeb ?? 0)}${routeCurrency ? ` ${routeCurrency}` : ''}`} />
                 {link.extraCharge ? <InfoRow label="Phụ thu" value={formatCurrency(link.extraCharge)} /> : null}
+                <InfoRow label="Thành tiền" value={formatCurrency(link.finalPriceVnd ?? 0)} highlight />
                 {link.trackingCode ? <InfoRow label="Tracking" value={link.trackingCode} /> : null}
                 {link.shipmentCode ? <InfoRow label="Mã vận đơn" value={link.shipmentCode} /> : null}
                 {link.note ? <Text style={styles.noteText}>{link.note}</Text> : null}
@@ -856,11 +856,11 @@ function Section({
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
+    <View style={[styles.detailRow, highlight && styles.detailRowHighlight]}>
+      <Text style={[styles.detailLabel, highlight && styles.detailLabelHighlight]}>{label}</Text>
+      <Text style={[styles.detailValue, highlight && styles.detailValueHighlight]}>{value}</Text>
     </View>
   );
 }
@@ -1308,6 +1308,24 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '800',
     fontFamily: fontFamilyForWeight('800'),
+  },
+  detailRowHighlight: {
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    marginTop: spacing.xs,
+    paddingTop: spacing.sm,
+  },
+  detailLabelHighlight: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '900',
+    fontFamily: fontFamilyForWeight('900'),
+    color: colors.textPrimary,
+  },
+  detailValueHighlight: {
+    fontSize: typography.fontSize.base,
+    fontWeight: '900',
+    fontFamily: fontFamilyForWeight('900'),
+    color: colors.primaryDark,
   },
   noteText: {
     marginTop: spacing.sm,

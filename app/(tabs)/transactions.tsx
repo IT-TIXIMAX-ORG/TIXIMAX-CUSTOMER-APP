@@ -87,7 +87,7 @@ const areTransactionFiltersEqual = (
 
 export default function TransactionsScreen() {
   const contentPaddingBottom = useTabScreenBottomPadding();
-  const contentPaddingTop = useScreenContentTopPadding();
+  const contentPaddingTop = useScreenContentTopPadding(spacing.base);
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<CustomerTransaction[]>([]);
