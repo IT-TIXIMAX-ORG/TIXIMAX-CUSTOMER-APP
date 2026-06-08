@@ -27,7 +27,7 @@ import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorState } from '@/src/components/ui/ErrorState';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
-import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
+import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, formatDate } from '@/src/shared/lib/utils';
 import { statusLabel, transactionPurposeLabel } from '@/src/shared/lib/labels';
 import { formatTransactionAmount, isPositiveTransaction } from '@/src/features/customer-portal/shared/lib/transaction';
@@ -87,6 +87,7 @@ const areTransactionFiltersEqual = (
 
 export default function TransactionsScreen() {
   const contentPaddingBottom = useTabScreenBottomPadding();
+  const contentPaddingTop = useScreenContentTopPadding();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<CustomerTransaction[]>([]);
@@ -293,7 +294,7 @@ export default function TransactionsScreen() {
             <TransactionItem transaction={item} />
           </Pressable>
         )}
-        contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
+        contentContainerStyle={[styles.listContent, { paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }]}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
@@ -393,7 +394,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.xl,
-    paddingTop: spacing['3xl'],
   },
   header: {
     marginBottom: spacing.xl,

@@ -19,7 +19,7 @@ import { useCustomerActiveOrders } from '@/src/features/customer-portal/shared/h
 import { formatCurrency } from '@/src/shared/lib/utils';
 import { normalizeLabelKey } from '@/src/shared/lib/labels';
 import { StaffCard } from '@/src/components/dashboard/StaffCard';
-import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
+import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 
 // Các trạng thái đơn cần người dùng hành động (thanh toán) — dùng cho thẻ "Cần chú ý".
 const PAYMENT_PENDING_STATUSES = new Set([
@@ -34,6 +34,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const user = useAuthUser();
   const contentPaddingBottom = useTabScreenBottomPadding();
+  const contentPaddingTop = useScreenContentTopPadding();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { data: profile, refetch: refetchProfile } = useCustomerProfile();
@@ -72,7 +73,7 @@ export default function DashboardScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}
+      contentContainerStyle={[styles.content, { paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }]}
       alwaysBounceVertical
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -172,7 +173,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    paddingTop: spacing['4xl'],
     paddingHorizontal: spacing.xl,
   },
   header: {

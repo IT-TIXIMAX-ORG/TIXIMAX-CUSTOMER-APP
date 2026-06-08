@@ -114,7 +114,18 @@ const getPaymentSessionKey = (session: CustomerOrderDetail['paymentSession']): s
 const normalizePaymentSessions = (values: unknown[]): NonNullable<CustomerOrderDetail['paymentSessions']> => {
   const sessions = values
     .map((value) => normalizePaymentSession(value))
-    .filter((session): session is NonNullable<CustomerOrderDetail['paymentSession']> => Boolean(session?.qrCode));
+    .filter((session): session is NonNullable<CustomerOrderDetail['paymentSession']> =>
+      Boolean(
+        session &&
+          (
+            session.qrCode ||
+            session.content ||
+            session.paymentCode ||
+            session.amount != null ||
+            session.bankAccount
+          ),
+      ),
+    );
   const seen = new Set<string>();
   return sessions.filter((session) => {
     const key = getPaymentSessionKey(session);
@@ -365,7 +376,9 @@ export const getCustomerOrderDetail = async (orderId: string): Promise<CustomerO
   const data = toRecord(response.data);
   const result = toRecord(data.result ?? data.data);
   const productPayment = toRecord(result.productPayment ?? result.product_payment);
-  const payments = Array.isArray(productPayment.payments) ? productPayment.payments : [];
+  const shippingPayment = toRecord(result.shippingPayment ?? result.shipping_payment);
+  const productPayments = Array.isArray(productPayment.payments) ? productPayment.payments : [];
+  const shippingPayments = Array.isArray(shippingPayment.payments) ? shippingPayment.payments : [];
   const responseSessions = Array.isArray(result.paymentSessions)
     ? result.paymentSessions
     : Array.isArray(result.payment_sessions)
@@ -373,7 +386,8 @@ export const getCustomerOrderDetail = async (orderId: string): Promise<CustomerO
       : [];
   const paymentSessions = normalizePaymentSessions([
     ...responseSessions,
-    ...payments,
+    ...productPayments,
+    ...shippingPayments,
     result.paymentSession,
     result.payment_session,
     result.latestPaymentSession,
@@ -555,4 +569,3 @@ export const cancelAllingoForDomesticDelivery = async (draftDomesticId: string, 
 export const syncAllingoForDomesticDelivery = async (draftDomesticId: string): Promise<void> => {
   await httpClient.post(`/customer-portal/domestic-deliveries/${draftDomesticId}/sync-allingo`);
 };
-
