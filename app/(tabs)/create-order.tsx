@@ -101,7 +101,7 @@ const orderTypes: Array<{
 export default function CreateOrderScreen() {
   const queryClient = useQueryClient();
   const contentPaddingBottom = useTabScreenBottomPadding();
-  const contentPaddingTop = useScreenContentTopPadding();
+  const contentPaddingTop = useScreenContentTopPadding(spacing.base);
   const { data: profile, refetch: refetchProfile } = useCustomerProfile();
   const [selectedType, setSelectedType] = useState<OrderTypeId | null>(null);
   const [routeId, setRouteId] = useState('');

@@ -78,7 +78,7 @@ const isValidDateFilter = (value: string) => {
 
 export default function OrdersScreen() {
   const contentPaddingBottom = useTabScreenBottomPadding();
-  const contentPaddingTop = useScreenContentTopPadding();
+  const contentPaddingTop = useScreenContentTopPadding(spacing.base);
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<OrdersTab>('active');
   const [activePage, setActivePage] = useState(1);

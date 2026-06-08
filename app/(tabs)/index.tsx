@@ -34,7 +34,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const user = useAuthUser();
   const contentPaddingBottom = useTabScreenBottomPadding();
-  const contentPaddingTop = useScreenContentTopPadding();
+  const contentPaddingTop = useScreenContentTopPadding(spacing.xl);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { data: profile, refetch: refetchProfile } = useCustomerProfile();

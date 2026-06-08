@@ -15,11 +15,11 @@ export const useSafeBottomPadding = () => {
 
 export const useScreenContentTopPadding = (
   basePadding: number = 0,
-  options?: { hasHeader?: boolean; includeTopInset?: boolean },
+  options?: { hasHeader?: boolean },
 ) => {
   const { top } = useSafeAreaInsets();
 
-  if (options?.hasHeader || !options?.includeTopInset) {
+  if (options?.hasHeader) {
     return basePadding;
   }
 
