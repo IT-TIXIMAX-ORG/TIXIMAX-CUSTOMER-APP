@@ -1,6 +1,7 @@
 export interface RouteSummary {
   routeId: number;
   routeName: string;
+  routeCurrency?: string;
   shippingFee: number;
   exchangeRate: number;
   destinationId?: number;

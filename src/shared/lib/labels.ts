@@ -104,6 +104,8 @@ export const statusLabel = (status?: string | null) => {
       return 'Đã nhập kho Việt Nam';
     case 'CHO_THANH_TOAN_SHIP':
       return 'Chờ thanh toán vận chuyển';
+    case 'DA_THANH_TOAN_SHIP':
+      return 'Đã thanh toán vận chuyển';
     case 'CHO_GIAO':
       return 'Chờ giao';
     case 'DANG_GIAO':
