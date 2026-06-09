@@ -315,7 +315,6 @@ export default function OrdersScreen() {
         segments={[
           { label: 'Đang xử lý', value: 'active' },
           { label: 'Lịch sử', value: 'history' },
-          { label: 'Nội địa', value: 'domestic' },
         ]}
       />
       {activeTab !== 'domestic' ? (
