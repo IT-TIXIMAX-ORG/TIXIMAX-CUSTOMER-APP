@@ -14,13 +14,14 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import * as WebBrowser from 'expo-web-browser';
 import Toast from 'react-native-toast-message';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
 import { ENV_CONFIG } from '@/src/shared/constants/env.constants';
 import { useCustomerOrderDetail } from '@/src/features/customer-portal/shared/hooks/use-customer-portal-data';
 import { StatusBadge } from '@/src/components/ui/StatusBadge';
-import { formatCurrency, formatDate, formatWeight } from '@/src/shared/lib/utils';
+import { formatCurrency, formatDate, formatNumber, formatWeight } from '@/src/shared/lib/utils';
 import { AppCard } from '@/src/components/ui/AppCard';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import {
@@ -284,7 +285,23 @@ export default function OrderDetailScreen() {
                   </View>
                   <StatusBadge status={link.status || link.orderStatus || ''} />
                 </View>
-                <Text style={styles.productName}>{link.productName || 'Sản phẩm chưa có tên'}</Text>
+                <Text style={[styles.productName, link.productLink ? styles.productNameTight : null]}>
+                  {link.productName || 'Sản phẩm chưa có tên'}
+                </Text>
+                {link.productLink ? (
+                  <Pressable
+                    accessibilityRole="link"
+                    accessibilityLabel="Mở link sản phẩm"
+                    onPress={() => void WebBrowser.openBrowserAsync(link.productLink!)}
+                    style={({ pressed }) => [styles.productLinkRow, pressed && styles.imagePressed]}
+                  >
+                    <Feather name="link" size={13} color={colors.primaryDark} />
+                    <Text style={styles.productLinkText} numberOfLines={1}>
+                      Link sản phẩm
+                    </Text>
+                    <Feather name="external-link" size={13} color={colors.primaryDark} />
+                  </Pressable>
+                ) : null}
                 {productImageUrl ? (
                   <Pressable
                     accessibilityRole="button"
@@ -300,7 +317,7 @@ export default function OrderDetailScreen() {
                   </Pressable>
                 ) : null}
                 <InfoRow label="Số lượng" value={String(link.quantity ?? '---')} />
-                <InfoRow label="Giá web" value={`${link.priceWeb ?? 0} ${routeCurrency}`} />
+                <InfoRow label="Giá web" value={`${formatNumber(link.priceWeb ?? 0)} ${routeCurrency}`} />
                 <InfoRow label="Ship web" value={formatCurrency(link.shipWeb ?? 0)} />
                 <InfoRow label="Thành tiền" value={formatCurrency(link.finalPriceVnd ?? 0)} />
                 {link.extraCharge ? <InfoRow label="Phụ thu" value={formatCurrency(link.extraCharge)} /> : null}
@@ -739,6 +756,23 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilyForWeight('900'),
     color: colors.textPrimary,
     marginBottom: spacing.md,
+  },
+  productNameTight: {
+    marginBottom: spacing.xs,
+  },
+  productLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  productLinkText: {
+    color: colors.primaryDark,
+    fontSize: typography.fontSize.sm,
+    fontWeight: '700',
+    fontFamily: fontFamilyForWeight('700'),
+    textDecorationLine: 'underline',
   },
   thumbRow: {
     flexDirection: 'row',
