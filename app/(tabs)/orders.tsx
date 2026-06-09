@@ -43,21 +43,15 @@ import { AppInput } from '@/src/components/ui/AppInput';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorState } from '@/src/components/ui/ErrorState';
 import { ModalShell } from '@/src/components/ui/ModalShell';
+import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { StatusBadge } from '@/src/components/ui/StatusBadge';
 import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, formatDate, formatWeight } from '@/src/shared/lib/utils';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 
-type OrderGroup = 'all' | 'active' | 'history' | 'domestic';
+type OrdersTab = 'active' | 'history' | 'domestic';
 type OrderListRow = CustomerActiveOrder | CustomerOrder | CustomerDomesticDeliveryItem;
-
-const GROUP_OPTIONS = [
-  { label: 'Tất cả đơn', value: 'all' },
-  { label: 'Đang xử lý', value: 'active' },
-  { label: 'Lịch sử', value: 'history' },
-  { label: 'Nội địa', value: 'domestic' },
-];
 
 const ORDER_TYPE_OPTIONS = [
   { label: 'Tất cả loại đơn', value: '' },
@@ -86,8 +80,7 @@ export default function OrdersScreen() {
   const contentPaddingBottom = useTabScreenBottomPadding();
   const contentPaddingTop = useScreenContentTopPadding(spacing.base);
   const queryClient = useQueryClient();
-  const [group, setGroup] = useState<OrderGroup>('all');
-  const [draftGroup, setDraftGroup] = useState<OrderGroup>('all');
+  const [activeTab, setActiveTab] = useState<OrdersTab>('active');
   const [activePage, setActivePage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
   const [domesticPage, setDomesticPage] = useState(1);
@@ -135,15 +128,9 @@ export default function OrdersScreen() {
     [dateFrom, dateTo, keyword, orderType, status],
   );
 
-  const activeOrdersQuery = useCustomerActiveOrders(activePage, pageSize, activeQuery, {
-    enabled: group === 'all' || group === 'active',
-  });
-  const historyOrdersQuery = useCustomerOrders(historyPage, pageSize, historyQuery, {
-    enabled: group === 'all' || group === 'history',
-  });
-  const domesticQuery = useCustomerDomesticDeliveries(domesticPage, pageSize, {
-    enabled: group === 'all' || group === 'domestic',
-  });
+  const activeOrdersQuery = useCustomerActiveOrders(activePage, pageSize, activeQuery);
+  const historyOrdersQuery = useCustomerOrders(historyPage, pageSize, historyQuery);
+  const domesticQuery = useCustomerDomesticDeliveries(domesticPage, pageSize);
 
   useEffect(() => {
     if (!activeOrdersQuery.data?.content) return;
@@ -169,8 +156,11 @@ export default function OrdersScreen() {
     setDomesticItems([]);
   };
 
+  const handleTabChange = (tab: OrdersTab) => {
+    setActiveTab(tab);
+  };
+
   const openFilter = () => {
-    setDraftGroup(group);
     setDraftKeyword(keyword);
     setDraftOrderType(orderType);
     setDraftStatus(status);
@@ -189,7 +179,6 @@ export default function OrdersScreen() {
       return;
     }
 
-    setGroup(draftGroup);
     setKeyword(draftKeyword.trim());
     setOrderType(draftOrderType);
     setStatus(draftStatus);
@@ -200,8 +189,6 @@ export default function OrdersScreen() {
   };
 
   const clearFilters = () => {
-    setDraftGroup('all');
-    setGroup('all');
     setDraftKeyword('');
     setKeyword('');
     setDraftOrderType('');
@@ -314,148 +301,113 @@ export default function OrdersScreen() {
     }
   };
 
-  const mergedItems = useMemo<OrderListRow[]>(() => {
-    const domestic = filterDomesticClientSide(domesticItems, { keyword, dateFrom, dateTo });
-
-    if (group === 'active') return activeItems;
-    if (group === 'history') return historyItems;
-    if (group === 'domestic') return domestic;
-
-    // group === 'all' → khử trùng active/history theo orderId + ẩn nội địa khi có lọc loại/trạng thái
-    const activeIds = new Set(activeItems.map((order) => order.orderId));
-    const historyOnly = historyItems.filter((order) => !activeIds.has(order.orderId));
-    const domesticForAll = orderType || status ? [] : domestic;
-    return [...activeItems, ...historyOnly, ...domesticForAll];
-  }, [group, activeItems, historyItems, domesticItems, keyword, dateFrom, dateTo, orderType, status]);
-
-  const relevantQueries =
-    group === 'active'
-      ? [activeOrdersQuery]
-      : group === 'history'
-        ? [historyOrdersQuery]
-        : group === 'domestic'
-          ? [domesticQuery]
-          : [activeOrdersQuery, historyOrdersQuery, domesticQuery];
-
-  const showLoading = mergedItems.length === 0 && relevantQueries.some((q) => q.isLoading);
-  const showError = mergedItems.length === 0 && relevantQueries.every((q) => q.isError);
-  const isFetchingAny = relevantQueries.some((q) => q.isFetching);
-
-  const activeHasMore =
-    (group === 'all' || group === 'active') &&
-    (activeOrdersQuery.data?.total ?? 0) > activeItems.length;
-  const historyHasMore =
-    (group === 'all' || group === 'history') &&
-    (historyOrdersQuery.data?.total ?? 0) > historyItems.length;
-  const domesticHasMore =
-    (group === 'all' || group === 'domestic') &&
-    (domesticQuery.data?.total ?? 0) > domesticItems.length;
-  const hasMore = activeHasMore || historyHasMore || domesticHasMore;
-
-  const loadMore = () => {
-    if (activeHasMore) setActivePage((p) => p + 1);
-    if (historyHasMore) setHistoryPage((p) => p + 1);
-    if (domesticHasMore) setDomesticPage((p) => p + 1);
-  };
-
-  const hasActiveFilter = group !== 'all' || Boolean(keyword || orderType || status || dateFrom || dateTo);
-
-  const groupLabel = GROUP_OPTIONS.find((option) => option.value === group)?.label ?? 'Tất cả đơn';
+  const currentQuery =
+    activeTab === 'active' ? activeOrdersQuery : activeTab === 'history' ? historyOrdersQuery : domesticQuery;
+  const currentData = currentQuery.data;
+  const currentItems: OrderListRow[] =
+    activeTab === 'active' ? activeItems : activeTab === 'history' ? historyItems : domesticItems;
 
   const renderHeader = () => (
     <View style={styles.header}>
       <Text style={styles.title}>Đơn hàng</Text>
-      <View style={styles.filterBar}>
-        <Pressable style={styles.searchBox} onPress={openFilter}>
-          <Feather name="search" size={16} color={colors.textMuted} />
-          <Text style={styles.searchText} numberOfLines={1}>
-            {hasActiveFilter ? `Bộ lọc: ${groupLabel}` : 'Tìm kiếm và lọc đơn hàng'}
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.filterButton, hasActiveFilter && styles.filterButtonActive]}
-          onPress={openFilter}
-        >
-          <Feather name="sliders" size={18} color={colors.primaryDark} />
-        </Pressable>
-      </View>
+      <SegmentedControl
+        value={activeTab}
+        onChange={handleTabChange}
+        segments={[
+          { label: 'Đang xử lý', value: 'active' },
+          { label: 'Lịch sử', value: 'history' },
+        ]}
+      />
+      {activeTab !== 'domestic' ? (
+        <View style={styles.filterBar}>
+          <Pressable style={styles.searchBox} onPress={openFilter}>
+            <Feather name="search" size={16} color={colors.textMuted} />
+            <Text style={styles.searchText} numberOfLines={1}>
+              {keyword || orderType || status || dateFrom || dateTo ? 'Đang áp dụng bộ lọc' : 'Tìm kiếm và lọc đơn hàng'}
+            </Text>
+          </Pressable>
+          <Pressable style={styles.filterButton} onPress={openFilter}>
+            <Feather name="sliders" size={18} color={colors.primaryDark} />
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 
   const renderFooter = () => {
-    if (!hasMore) return null;
+    if (!currentData || currentData.total <= currentItems.length) return null;
 
     return (
       <View style={styles.footer}>
-        <AppButton title="Tải thêm" variant="outline" onPress={loadMore} isLoading={isFetchingAny} />
+        <AppButton
+          title="Tải thêm"
+          variant="outline"
+          onPress={() => {
+            if (activeTab === 'active') setActivePage((p) => p + 1);
+            else if (activeTab === 'history') setHistoryPage((p) => p + 1);
+            else setDomesticPage((p) => p + 1);
+          }}
+          isLoading={currentQuery.isFetching}
+        />
       </View>
     );
   };
 
   const renderEmpty = () => {
-    if (showLoading) {
+    if (currentQuery.isLoading) {
       return <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />;
     }
 
-    if (showError) {
-      const erroredQuery = relevantQueries.find((q) => q.error instanceof Error);
+    if (currentQuery.isError && currentItems.length === 0) {
       const errorDetail =
-        __DEV__ && erroredQuery?.error instanceof Error ? erroredQuery.error.message : '';
+        __DEV__ && currentQuery.error instanceof Error ? currentQuery.error.message : '';
       return (
         <ErrorState
           title="Không tải được dữ liệu"
           description={
-            errorDetail ? `Lỗi: ${errorDetail}` : 'Đã có lỗi hoặc mất kết nối. Vui lòng thử lại.'
+            errorDetail
+              ? `Lỗi: ${errorDetail}`
+              : 'Đã có lỗi hoặc mất kết nối. Vui lòng thử lại.'
           }
-          onRetry={() => void Promise.all(relevantQueries.map((q) => q.refetch()))}
-          isRetrying={isFetchingAny}
+          onRetry={() => void currentQuery.refetch()}
+          isRetrying={currentQuery.isFetching}
         />
       );
     }
 
     return (
       <EmptyState
-        icon={group === 'domestic' ? 'truck' : 'package'}
-        title={group === 'domestic' ? 'Chưa có vận chuyển nội địa' : 'Chưa có đơn hàng'}
+        icon={activeTab === 'domestic' ? 'truck' : 'package'}
+        title={activeTab === 'domestic' ? 'Chưa có vận chuyển nội địa' : 'Chưa có đơn hàng'}
         description={
-          group === 'active'
+          activeTab === 'active'
             ? 'Không có đơn hàng nào đang xử lý theo bộ lọc hiện tại.'
-            : group === 'history'
+            : activeTab === 'history'
               ? 'Bạn chưa có lịch sử đơn hàng phù hợp.'
-              : group === 'domestic'
-                ? 'Các đơn giao nội địa và trạng thái Allingo sẽ xuất hiện tại đây.'
-                : 'Không có đơn hàng nào phù hợp với bộ lọc hiện tại.'
+              : 'Các đơn giao nội địa và trạng thái Allingo sẽ xuất hiện tại đây.'
         }
       />
     );
   };
 
   const renderItem = ({ item }: { item: OrderListRow }) => {
-    if ('draftDomesticId' in item) {
-      return (
-        <DomesticDeliveryCard
-          item={item}
-          onBook={openQuotes}
-          onCancel={cancelAllingo}
-          onSync={syncAllingo}
-        />
-      );
-    }
-    if ('journey' in item) return <ActiveOrderCard order={item} />;
-    return <OrderListItem order={item} />;
+    if (activeTab === 'active') return <ActiveOrderCard order={item as CustomerActiveOrder} />;
+    if (activeTab === 'history') return <OrderListItem order={item as CustomerOrder} />;
+    return (
+      <DomesticDeliveryCard
+        item={item as CustomerDomesticDeliveryItem}
+        onBook={openQuotes}
+        onCancel={cancelAllingo}
+        onSync={syncAllingo}
+      />
+    );
   };
 
   return (
     <View style={styles.container}>
       <FlatList<OrderListRow>
-        data={mergedItems}
-        keyExtractor={(item) =>
-          'draftDomesticId' in item
-            ? `dom:${item.draftDomesticId}`
-            : 'journey' in item
-              ? `act:${item.orderId}`
-              : `his:${item.orderId}`
-        }
+        data={currentItems}
+        keyExtractor={(item) => ('orderId' in item ? item.orderId : item.draftDomesticId)}
         renderItem={renderItem}
         contentContainerStyle={[styles.listContent, { paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }]}
         ListHeaderComponent={renderHeader}
@@ -476,12 +428,6 @@ export default function OrdersScreen() {
       />
 
       <ModalShell visible={filterOpen} title="Bộ lọc đơn hàng" onClose={() => setFilterOpen(false)}>
-        <SelectSheet
-          label="Nhóm đơn"
-          value={draftGroup}
-          options={GROUP_OPTIONS}
-          onChange={(value) => setDraftGroup(value as OrderGroup)}
-        />
         <AppInput
           label="Từ khóa"
           placeholder="Mã đơn, mã vận đơn..."
@@ -490,11 +436,6 @@ export default function OrdersScreen() {
         />
         <SelectSheet label="Loại đơn" value={draftOrderType} options={ORDER_TYPE_OPTIONS} onChange={setDraftOrderType} />
         <SelectSheet label="Trạng thái" value={draftStatus} options={MAIN_STATUS_OPTIONS} onChange={setDraftStatus} />
-        {draftGroup === 'domestic' ? (
-          <Text style={styles.filterHint}>
-            Đơn nội địa chỉ lọc theo Từ khóa và Khoảng ngày; Loại đơn và Trạng thái không áp dụng.
-          </Text>
-        ) : null}
         <View style={styles.dateRow}>
           <View style={styles.dateCol}>
             <AppInput label="Từ ngày" placeholder="YYYY-MM-DD" value={draftDateFrom} onChangeText={setDraftDateFrom} />
@@ -601,25 +542,6 @@ const mergeByKey = <T extends Record<string, any>>(previous: T[], incoming: T[],
   return merged;
 };
 
-// Endpoint nội địa không nhận tham số lọc → lọc phía client trên dữ liệu đã tải.
-const filterDomesticClientSide = (
-  items: CustomerDomesticDeliveryItem[],
-  filters: { keyword: string; dateFrom: string; dateTo: string },
-) => {
-  let result = items;
-  if (filters.keyword) {
-    const kw = filters.keyword.toLowerCase();
-    result = result.filter((item) =>
-      [item.shipCode, item.address, item.phoneNumber, item.carrierName].some((value) =>
-        value?.toLowerCase().includes(kw),
-      ),
-    );
-  }
-  if (filters.dateFrom) result = result.filter((item) => item.createdAt >= filters.dateFrom);
-  if (filters.dateTo) result = result.filter((item) => item.createdAt <= `${filters.dateTo}T23:59:59`);
-  return result;
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -668,16 +590,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  filterButtonActive: {
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  filterHint: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
   },
   footer: {
     marginTop: spacing.lg,

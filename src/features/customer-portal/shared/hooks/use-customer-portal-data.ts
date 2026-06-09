@@ -14,35 +14,25 @@ import {
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 import { useIsAuthenticated } from '@/src/features/auth/hooks/use-auth-store';
 
-export const useCustomerOrders = (
-  page = 1,
-  size = 5,
-  query?: string | CustomerOrderQuery,
-  options?: { enabled?: boolean },
-) => {
+export const useCustomerOrders = (page = 1, size = 5, query?: string | CustomerOrderQuery) => {
   const isAuthenticated = useIsAuthenticated();
   const keyType = typeof query === 'string' ? query : query?.type;
 
   return useQuery({
     queryKey: [...QUERY_KEYS.customerPortal.orders(page, size, keyType), query],
     queryFn: () => getCustomerOrders(page, size, query),
-    enabled: isAuthenticated && (options?.enabled ?? true),
+    enabled: isAuthenticated,
     refetchOnWindowFocus: false,
   });
 };
 
-export const useCustomerActiveOrders = (
-  page = 1,
-  size = 10,
-  query?: CustomerActiveOrderQuery,
-  options?: { enabled?: boolean },
-) => {
+export const useCustomerActiveOrders = (page = 1, size = 10, query?: CustomerActiveOrderQuery) => {
   const isAuthenticated = useIsAuthenticated();
 
   return useQuery({
     queryKey: ['customer-portal', 'orders', 'active', page, size, query],
     queryFn: () => getCustomerActiveOrders(page, size, query),
-    enabled: isAuthenticated && (options?.enabled ?? true),
+    enabled: isAuthenticated,
     refetchOnWindowFocus: false,
   });
 };
@@ -80,19 +70,14 @@ export const useCustomerTransactions = (page = 1, size = 5, query?: TransactionQ
   });
 };
 
-export const useCustomerDomesticDeliveries = (
-  page = 1,
-  size = 10,
-  options?: { enabled?: boolean },
-) => {
+export const useCustomerDomesticDeliveries = (page = 1, size = 10) => {
   const isAuthenticated = useIsAuthenticated();
-  const enabled = isAuthenticated && (options?.enabled ?? true);
 
   return useQuery({
     queryKey: ['customer-portal', 'domestic-deliveries', page, size],
     queryFn: () => getCustomerDomesticDeliveries(page, size),
-    enabled,
-    refetchInterval: enabled ? 30000 : false,
+    enabled: isAuthenticated,
+    refetchInterval: 30000,
     refetchOnWindowFocus: false,
   });
 };
