@@ -30,6 +30,15 @@ export const getRoutes = async (): Promise<RouteSummary[]> => {
     return {
       routeId: toNumber(route.routeId ?? route.id),
       routeName: String(route.routeName ?? route.name ?? ''),
+      routeCurrency: String(
+        route.routeCurrency ??
+        route.currency ??
+        route.currencyCode ??
+        route.currency_code ??
+        route.destinationCurrency ??
+        route.destination_currency ??
+        '',
+      ) || undefined,
       shippingFee: toNumber(route.shippingFee ?? route.unitBuyingPrice ?? route.unitDepositPrice),
       exchangeRate: toNumber(route.exchangeRate),
       destinationId: toNumber(route.destinationId),

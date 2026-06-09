@@ -13,6 +13,19 @@ export const useSafeBottomPadding = () => {
   return Math.max(bottom, TAB_BAR_MIN_BOTTOM_PADDING);
 };
 
+export const useScreenContentTopPadding = (
+  basePadding: number = 0,
+  options?: { hasHeader?: boolean },
+) => {
+  const { top } = useSafeAreaInsets();
+
+  if (options?.hasHeader) {
+    return basePadding;
+  }
+
+  return basePadding + Math.max(top, spacing.sm);
+};
+
 export const useTabScreenBottomPadding = (basePadding: number = TAB_SCREEN_BOTTOM_GUTTER) => {
   const safeBottomPadding = useSafeBottomPadding();
 

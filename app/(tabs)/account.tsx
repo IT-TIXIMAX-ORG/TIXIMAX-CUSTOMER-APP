@@ -38,7 +38,7 @@ import { AppInput } from '@/src/components/ui/AppInput';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
-import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
+import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 
 type AccountModal = 'profile' | 'address' | 'security' | 'verify' | 'support' | null;
 
@@ -46,6 +46,7 @@ export default function AccountScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const contentPaddingBottom = useTabScreenBottomPadding(spacing.md);
+  const contentPaddingTop = useScreenContentTopPadding();
   const user = useAuthUser();
   const { logout } = useAuthActions();
   const { data: profile, refetch } = useCustomerProfile();
@@ -396,7 +397,7 @@ export default function AccountScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}
+      contentContainerStyle={[styles.content, { paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }]}
       alwaysBounceVertical
       refreshControl={
         Platform.OS !== 'web' ? (
@@ -724,7 +725,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
   },
   title: {
     fontSize: typography.fontSize.xl,

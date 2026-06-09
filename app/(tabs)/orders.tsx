@@ -46,7 +46,7 @@ import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { StatusBadge } from '@/src/components/ui/StatusBadge';
-import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
+import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, formatDate, formatWeight } from '@/src/shared/lib/utils';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 
@@ -78,6 +78,7 @@ const isValidDateFilter = (value: string) => {
 
 export default function OrdersScreen() {
   const contentPaddingBottom = useTabScreenBottomPadding();
+  const contentPaddingTop = useScreenContentTopPadding(spacing.base);
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<OrdersTab>('active');
   const [activePage, setActivePage] = useState(1);
@@ -408,7 +409,7 @@ export default function OrdersScreen() {
         data={currentItems}
         keyExtractor={(item) => ('orderId' in item ? item.orderId : item.draftDomesticId)}
         renderItem={renderItem}
-        contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
+        contentContainerStyle={[styles.listContent, { paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }]}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
@@ -548,7 +549,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.xl,
-    paddingTop: spacing['3xl'],
   },
   header: {
     marginBottom: spacing.xl,

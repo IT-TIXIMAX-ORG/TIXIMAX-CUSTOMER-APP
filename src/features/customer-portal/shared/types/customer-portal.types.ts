@@ -54,6 +54,7 @@ export interface CustomerOrder {
   leftoverMoney: number | null;
   priceBeforeFee: number | null;
   insuranceFee: number | null;
+  quantityCheckFee?: number | null;
   paymentAfterAuction?: number | null;
   totalLinks: number;
   createdAt: string;

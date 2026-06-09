@@ -33,6 +33,7 @@ const getStatusConfig = (status?: string | null) => {
     case 'DA_GIAO':
     case 'COMPLETED':
     case 'DA_THANH_TOAN':
+    case 'DA_THANH_TOAN_SHIP':
     case 'SUCCESS':
       return { bg: colors.successLight, text: colors.successText };
 

@@ -29,7 +29,7 @@ import {
   createCustomerPurchaseOrder,
 } from '@/src/features/customer-portal/shared/services/create-order.service';
 import { uploadImageUri } from '@/src/shared/services/upload-image.service';
-import { useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
+import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, parseNumberInput } from '@/src/shared/lib/utils';
 
 type OrderTypeId = 'MUA_HO' | 'KY_GUI';
@@ -85,6 +85,7 @@ const orderTypes: Array<{
 export default function CreateOrderScreen() {
   const queryClient = useQueryClient();
   const contentPaddingBottom = useTabScreenBottomPadding();
+  const contentPaddingTop = useScreenContentTopPadding(spacing.base);
   const { data: profile, refetch: refetchProfile } = useCustomerProfile();
   const [selectedType, setSelectedType] = useState<OrderTypeId | null>(null);
   const [routeId, setRouteId] = useState('');
@@ -426,9 +427,9 @@ export default function CreateOrderScreen() {
 
   return (
     <>
-    <KeyboardAwareScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: contentPaddingBottom }]}
+      <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }]}
       bottomOffset={spacing.md}
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
@@ -762,7 +763,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.xl,
-    paddingTop: spacing['3xl'],
   },
   title: {
     fontSize: typography.fontSize.xl,
