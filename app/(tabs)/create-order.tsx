@@ -32,7 +32,7 @@ import { uploadImageUri } from '@/src/shared/services/upload-image.service';
 import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, parseNumberInput } from '@/src/shared/lib/utils';
 
-type OrderTypeId = 'MUA_HO' | 'KY_GUI' | 'CHUYEN_TIEN' | 'DAU_GIA';
+type OrderTypeId = 'MUA_HO' | 'KY_GUI';
 
 interface ProductLine {
   productName: string;
@@ -67,8 +67,6 @@ const orderTypes: Array<{
   title: string;
   desc: string;
   icon: keyof typeof Feather.glyphMap;
-  isConsultancy?: boolean;
-  isComingSoon?: boolean;
 }> = [
   {
     id: 'MUA_HO',
@@ -81,20 +79,6 @@ const orderTypes: Array<{
     title: 'Ký gửi',
     desc: 'Gửi hàng về Việt Nam qua kho nước ngoài.',
     icon: 'truck',
-  },
-  {
-    id: 'CHUYEN_TIEN',
-    title: 'Chuyển tiền',
-    desc: 'SẮP RA MẮT',
-    icon: 'repeat',
-    isComingSoon: true,
-  },
-  {
-    id: 'DAU_GIA',
-    title: 'Đấu giá',
-    desc: 'SẮP RA MẮT',
-    icon: 'award',
-    isConsultancy: true,
   },
 ];
 
@@ -209,17 +193,6 @@ export default function CreateOrderScreen() {
     }));
 
   const handleSelectType = (type: (typeof orderTypes)[number]) => {
-    if (type.isComingSoon) {
-      Alert.alert(type.title, 'Sẽ sớm ra mắt');
-      return;
-    }
-    if (type.isConsultancy) {
-      Alert.alert(
-        type.title,
-        `${type.desc}\n\nNhân viên phụ trách: ${profile?.dedicatedStaff?.name || 'TixiMax'}\nSĐT: ${profile?.dedicatedStaff?.phone || 'Hotline'}`,
-      );
-      return;
-    }
     resetForm();
     setSelectedType(type.id);
   };
@@ -676,7 +649,7 @@ export default function CreateOrderScreen() {
                 <Text style={styles.cardTitle}>{type.title}</Text>
                 <Text style={styles.cardDesc}>{type.desc}</Text>
                 <View style={styles.cardAction}>
-                  <Text style={styles.actionText}>{type.isConsultancy ? 'Tư vấn thêm' : 'Tiếp tục'}</Text>
+                  <Text style={styles.actionText}>Tiếp tục</Text>
                   <Feather name="arrow-right" size={14} color={colors.primaryDark} />
                 </View>
               </Pressable>
