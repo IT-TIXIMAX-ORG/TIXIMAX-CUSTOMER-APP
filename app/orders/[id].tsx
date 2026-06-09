@@ -553,6 +553,20 @@ export default function OrderDetailScreen() {
                   <StatusBadge status={link.status || link.orderStatus || ''} />
                 </View>
                 <Text style={styles.productName}>{link.productName || 'Sản phẩm chưa có tên'}</Text>
+                {link.productLink ? (
+                  <Pressable
+                    accessibilityRole="link"
+                    accessibilityLabel="Mở link sản phẩm"
+                    onPress={() => void Linking.openURL(link.productLink!)}
+                    style={({ pressed }) => [styles.productLinkRow, pressed && styles.imagePressed]}
+                  >
+                    <Feather name="link" size={13} color={colors.primaryDark} />
+                    <Text style={styles.productLinkText} numberOfLines={1}>
+                      Link sản phẩm
+                    </Text>
+                    <Feather name="external-link" size={13} color={colors.primaryDark} />
+                  </Pressable>
+                ) : null}
                 {productImageUrl ? (
                   <Pressable
                     accessibilityRole="button"
@@ -1262,6 +1276,19 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilyForWeight('900'),
     color: colors.textPrimary,
     marginBottom: spacing.md,
+  },
+  productLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  productLinkText: {
+    color: colors.primaryDark,
+    fontSize: typography.fontSize.sm,
+    fontWeight: '700',
+    fontFamily: fontFamilyForWeight('700'),
   },
   thumbRow: {
     flexDirection: 'row',
