@@ -37,6 +37,8 @@ import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
+import { MenuItem } from '@/src/components/account/MenuItem';
+import { MenuSection } from '@/src/components/account/MenuSection';
 import { ProfileTasksSheet } from '@/src/components/account/ProfileTasksSheet';
 import { ProfileUpdateWidget } from '@/src/components/account/ProfileUpdateWidget';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
@@ -453,23 +455,24 @@ export default function AccountScreen() {
         </View>
       </View>
 
-      <View style={styles.menuContainer}>
+      <MenuSection title="Tài khoản của tôi">
         <MenuItem title="Thông tin cá nhân" icon="user" onPress={() => setModal('profile')} />
-        <MenuItem title="Sổ địa chỉ nhận hàng" icon="map-pin" onPress={openAddressList} />
         <MenuItem title="Xác minh tài khoản" icon="check-circle" onPress={() => setModal('verify')} />
-        <MenuItem title="Bảo mật và mật khẩu" icon="shield" onPress={() => setModal('security')} />
         <MenuItem title="Nhân viên hỗ trợ" icon="help-circle" onPress={() => setModal('support')} isLast />
-      </View>
+      </MenuSection>
 
-      <Pressable
-        style={[styles.logoutBtn, isLoggingOut && styles.logoutBtnDisabled]}
-        onPress={handleLogoutNow}
-        disabled={isLoggingOut}
-        hitSlop={12}
-      >
-        <Feather name="log-out" size={18} color={colors.error} />
-        <Text style={styles.logoutText}>{isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}</Text>
-      </Pressable>
+      <MenuSection title="Thiết lập chung">
+        <MenuItem title="Sổ địa chỉ nhận hàng" icon="map-pin" onPress={openAddressList} />
+        <MenuItem title="Bảo mật và mật khẩu" icon="shield" onPress={() => setModal('security')} />
+        <MenuItem
+          title={isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
+          icon="log-out"
+          variant="danger"
+          onPress={handleLogoutNow}
+          disabled={isLoggingOut}
+          isLast
+        />
+      </MenuSection>
 
       <ProfileTasksSheet
         visible={modal === 'progress'}
@@ -623,30 +626,6 @@ export default function AccountScreen() {
         </Modal>
       ) : null}
     </ScrollView>
-  );
-}
-
-function MenuItem({
-  title,
-  icon,
-  onPress,
-  isLast = false,
-}: {
-  title: string;
-  icon: keyof typeof Feather.glyphMap;
-  onPress: () => void;
-  isLast?: boolean;
-}) {
-  return (
-    <Pressable style={[styles.menuItem, !isLast && styles.menuItemBorder]} onPress={onPress}>
-      <View style={styles.menuItemLeft}>
-        <View style={styles.menuIconBg}>
-          <Feather name={icon} size={18} color={colors.textSecondary} />
-        </View>
-        <Text style={styles.menuTitle}>{title}</Text>
-      </View>
-      <Feather name="chevron-right" size={20} color={colors.border} />
-    </Pressable>
   );
 }
 
@@ -805,68 +784,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontFamily: fontFamilyForWeight('900'),
     color: colors.black,
-    textTransform: 'uppercase',
-  },
-  menuContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius['2xl'],
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    overflow: 'hidden',
-    marginBottom: spacing.md,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 48,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  menuItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  menuIconBg: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  menuTitle: {
-    flex: 1,
-    fontSize: typography.fontSize.sm,
-    fontWeight: '800',
-    fontFamily: fontFamilyForWeight('800'),
-    color: colors.textPrimary,
-  },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 46,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.errorLight,
-    borderRadius: borderRadius['2xl'],
-    gap: spacing.sm,
-  },
-  logoutBtnDisabled: {
-    opacity: 0.65,
-  },
-  logoutText: {
-    color: colors.error,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
     textTransform: 'uppercase',
   },
   helperText: {
