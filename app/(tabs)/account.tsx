@@ -32,15 +32,16 @@ import {
 } from '@/src/features/customer-portal/shared/services/customer-portal.service';
 import { changeCurrentPassword, createLocalPassword, getReferralSaleStaff } from '@/src/features/auth/services/auth.service';
 import type { ReferralStaffOption } from '@/src/features/customer-portal/shared/types/master-data.types';
-import { formatCurrency } from '@/src/shared/lib/utils';
 import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { MenuItem } from '@/src/components/account/MenuItem';
 import { MenuSection } from '@/src/components/account/MenuSection';
+import { ProfileHeader } from '@/src/components/account/ProfileHeader';
 import { ProfileTasksSheet } from '@/src/components/account/ProfileTasksSheet';
 import { ProfileUpdateWidget } from '@/src/components/account/ProfileUpdateWidget';
+import { WalletCard } from '@/src/components/account/WalletCard';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 
@@ -414,18 +415,7 @@ export default function AccountScreen() {
     >
       <Text style={styles.title}>Tài khoản</Text>
 
-      <View style={styles.profileCard}>
-        <View style={styles.avatarContainer}>
-          <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
-        </View>
-        <View style={styles.profileInfo}>
-          <Text style={styles.userName}>{displayName}</Text>
-          <Text style={styles.userEmail}>{displayEmail}</Text>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>Cấp độ {currentLevel}/3</Text>
-          </View>
-        </View>
-      </View>
+      <ProfileHeader name={displayName} email={displayEmail} level={currentLevel} />
 
       {showProgressCard ? (
         <ProfileUpdateWidget
@@ -437,23 +427,10 @@ export default function AccountScreen() {
         />
       ) : null}
 
-      <View style={styles.walletCard}>
-        <View style={styles.walletRow}>
-          <View style={styles.walletIcon}>
-            <Feather name="credit-card" size={20} color={colors.primaryDark} />
-          </View>
-          <View style={styles.walletInfo}>
-            <Text style={styles.walletLabel}>Số dư ví</Text>
-            <Text style={styles.walletAmount}>{formatCurrency(profile?.balance ?? 0)}</Text>
-          </View>
-          <Pressable
-            style={styles.depositBtn}
-            onPress={() => Alert.alert('Nạp tiền', 'Vui lòng liên hệ nhân viên phụ trách để được hướng dẫn nạp tiền.')}
-          >
-            <Text style={styles.depositText}>Nạp tiền</Text>
-          </Pressable>
-        </View>
-      </View>
+      <WalletCard
+        balance={profile?.balance ?? 0}
+        onDeposit={() => Alert.alert('Nạp tiền', 'Vui lòng liên hệ nhân viên phụ trách để được hướng dẫn nạp tiền.')}
+      />
 
       <MenuSection title="Tài khoản của tôi">
         <MenuItem title="Thông tin cá nhân" icon="user" onPress={() => setModal('profile')} />
@@ -683,107 +660,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilyForWeight('900'),
     color: colors.textPrimary,
     marginBottom: spacing.md,
-    textTransform: 'uppercase',
-  },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  avatarContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  avatarText: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.black,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: typography.fontSize.md,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  userEmail: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  levelBadge: {
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    alignSelf: 'flex-start',
-  },
-  levelText: {
-    fontSize: 10,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.primaryDark,
-    textTransform: 'uppercase',
-  },
-  walletCard: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius['2xl'],
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    marginBottom: spacing.md,
-  },
-  walletRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  walletIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  walletInfo: {
-    flex: 1,
-  },
-  walletLabel: {
-    fontSize: 10,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.textSecondary,
-    marginBottom: 2,
-    textTransform: 'uppercase',
-  },
-  walletAmount: {
-    fontSize: typography.fontSize.md,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.textPrimary,
-  },
-  depositBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.md,
-  },
-  depositText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.black,
     textTransform: 'uppercase',
   },
   helperText: {
