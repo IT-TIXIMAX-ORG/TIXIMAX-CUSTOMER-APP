@@ -37,10 +37,12 @@ import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
+import { ProfileTasksSheet } from '@/src/components/account/ProfileTasksSheet';
+import { ProfileUpdateWidget } from '@/src/components/account/ProfileUpdateWidget';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 
-type AccountModal = 'profile' | 'address' | 'security' | 'verify' | 'support' | null;
+type AccountModal = 'progress' | 'profile' | 'address' | 'security' | 'verify' | 'support' | null;
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -387,10 +389,8 @@ export default function AccountScreen() {
   ];
   // Cấp độ là field authoritative từ backend; FE KHÔNG tự suy ra để tránh lệch với hệ thống.
   const currentLevel = profile?.profileCompletionLevel ?? 1;
-  const levelLabel = `Level ${currentLevel}`;
   // Checklist chỉ để hướng dẫn bước còn thiếu và thể hiện tiến độ thao tác của người dùng.
   const completedTaskCount = profileTasks.filter((task) => task.completed).length;
-  const taskProgressPercent = Math.round((completedTaskCount / profileTasks.length) * 100);
   const nextTask = profileTasks.find((task) => !task.completed);
   const showProgressCard = currentLevel < 3;
 
@@ -426,49 +426,13 @@ export default function AccountScreen() {
       </View>
 
       {showProgressCard ? (
-        <View style={styles.progressCard}>
-          <View style={styles.progressHeader}>
-            <View style={styles.progressContent}>
-              <Text style={styles.progressTitle}>Tiến độ lên level 3</Text>
-              <Text style={styles.progressSubtitle}>
-                {completedTaskCount}/{profileTasks.length} nhiệm vụ hoàn thành • {levelLabel}
-              </Text>
-            </View>
-            <Text style={styles.progressPercent}>{taskProgressPercent}%</Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${taskProgressPercent}%` }]} />
-          </View>
-          <Text style={styles.progressHint}>
-            {nextTask
-              ? `Nhiệm vụ tiếp theo: ${nextTask.title}. Hệ thống sẽ tự cập nhật cấp độ khi bạn hoàn thành.`
-              : 'Bạn đã hoàn thành các nhiệm vụ gợi ý. Hệ thống sẽ tự cập nhật cấp độ.'}
-          </Text>
-          <View style={styles.taskList}>
-            {profileTasks.map((task) => (
-              <Pressable
-                key={task.key}
-                style={[styles.taskItem, task.completed && styles.taskItemDone]}
-                onPress={task.action}
-              >
-                <View style={[styles.taskIconWrap, task.completed && styles.taskIconWrapDone]}>
-                  <Feather
-                    name={task.completed ? 'check' : 'arrow-up-right'}
-                    size={15}
-                    color={task.completed ? colors.successText : colors.primaryDark}
-                  />
-                </View>
-                <View style={styles.taskContent}>
-                  <Text style={[styles.taskTitle, task.completed && styles.taskTitleDone]}>{task.title}</Text>
-                  <Text style={styles.taskDetail}>{task.detail}</Text>
-                </View>
-                <Text style={[styles.taskStatus, task.completed && styles.taskStatusDone]}>
-                  {task.completed ? 'Hoàn thành' : 'Thực hiện'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+        <ProfileUpdateWidget
+          completedCount={completedTaskCount}
+          totalCount={profileTasks.length}
+          level={currentLevel}
+          nextTaskTitle={nextTask?.title}
+          onPress={() => setModal('progress')}
+        />
       ) : null}
 
       <View style={styles.walletCard}>
@@ -506,6 +470,14 @@ export default function AccountScreen() {
         <Feather name="log-out" size={18} color={colors.error} />
         <Text style={styles.logoutText}>{isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}</Text>
       </Pressable>
+
+      <ProfileTasksSheet
+        visible={modal === 'progress'}
+        onClose={() => setModal(null)}
+        tasks={profileTasks}
+        level={currentLevel}
+        completedCount={completedTaskCount}
+      />
 
       <ModalShell visible={modal === 'profile'} title="Thông tin cá nhân" onClose={() => setModal(null)}>
         <AppInput label="Họ tên" value={name} onChangeText={setName} />
@@ -782,119 +754,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilyForWeight('900'),
     color: colors.primaryDark,
     textTransform: 'uppercase',
-  },
-  progressCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: borderRadius['2xl'],
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    marginBottom: spacing.md,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  progressContent: {
-    flex: 1,
-  },
-  progressTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.textPrimary,
-    textTransform: 'uppercase',
-  },
-  progressSubtitle: {
-    marginTop: spacing.xs,
-    color: colors.textSecondary,
-    fontSize: typography.fontSize.xs,
-    fontWeight: '700',
-    fontFamily: fontFamilyForWeight('700'),
-  },
-  progressPercent: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.primaryDark,
-  },
-  progressTrack: {
-    height: 10,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background,
-    overflow: 'hidden',
-    marginTop: spacing.md,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-  },
-  progressHint: {
-    marginTop: spacing.md,
-    color: colors.textSecondary,
-    fontSize: typography.fontSize.sm,
-    fontWeight: '700',
-    fontFamily: fontFamilyForWeight('700'),
-    lineHeight: 20,
-  },
-  taskList: {
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  taskItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  taskItemDone: {
-    backgroundColor: colors.successLight,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  taskIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  taskIconWrapDone: {
-    backgroundColor: colors.white,
-  },
-  taskContent: {
-    flex: 1,
-  },
-  taskTitle: {
-    color: colors.textPrimary,
-    fontWeight: '800',
-    fontFamily: fontFamilyForWeight('800'),
-    fontSize: typography.fontSize.sm,
-  },
-  taskTitleDone: {
-    color: colors.successText,
-  },
-  taskDetail: {
-    marginTop: 2,
-    color: colors.textSecondary,
-    fontSize: typography.fontSize.xs,
-    lineHeight: 16,
-  },
-  taskStatus: {
-    color: colors.primaryDark,
-    fontSize: typography.fontSize.xs,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    textTransform: 'uppercase',
-  },
-  taskStatusDone: {
-    color: colors.successText,
   },
   walletCard: {
     backgroundColor: colors.surface,
