@@ -1,16 +1,15 @@
-// Khối thông tin user đầu màn hình Tài khoản (avatar chữ cái, tên, email, badge cấp độ).
+// Khối thông tin user đầu màn hình Tài khoản (avatar chữ cái, tên, email).
 
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
+import { colors, typography, spacing, fontFamilyForWeight } from '@/src/theme/tokens';
 
 type Props = {
   name: string;
   email: string;
-  level: number;
 };
 
-export function ProfileHeader({ name, email, level }: Props) {
+export function ProfileHeader({ name, email }: Props) {
   return (
     <View style={styles.profileCard}>
       <View style={styles.avatarContainer}>
@@ -19,9 +18,6 @@ export function ProfileHeader({ name, email, level }: Props) {
       <View style={styles.profileInfo}>
         <Text style={styles.userName}>{name}</Text>
         <Text style={styles.userEmail}>{email}</Text>
-        <View style={styles.levelBadge}>
-          <Text style={styles.levelText}>Cấp độ {level}/3</Text>
-        </View>
       </View>
     </View>
   );
@@ -61,20 +57,5 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: typography.fontSize.xs,
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  levelBadge: {
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    alignSelf: 'flex-start',
-  },
-  levelText: {
-    fontSize: 10,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.primaryDark,
-    textTransform: 'uppercase',
   },
 });

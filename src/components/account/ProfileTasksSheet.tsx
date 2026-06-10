@@ -13,11 +13,10 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   tasks: ProfileTask[];
-  level: number;
   completedCount: number;
 };
 
-export function ProfileTasksSheet({ visible, onClose, tasks, level, completedCount }: Props) {
+export function ProfileTasksSheet({ visible, onClose, tasks, completedCount }: Props) {
   const percent = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
   const nextTask = tasks.find((task) => !task.completed);
 
@@ -27,7 +26,7 @@ export function ProfileTasksSheet({ visible, onClose, tasks, level, completedCou
         <View style={[styles.fill, { width: `${percent}%` }]} />
       </View>
       <Text style={styles.summary}>
-        {completedCount}/{tasks.length} mục hoàn thành • Cấp độ {level}/3
+        {completedCount}/{tasks.length} mục hoàn thành
       </Text>
       <Text style={styles.hint}>
         {nextTask

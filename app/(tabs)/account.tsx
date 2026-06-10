@@ -415,13 +415,12 @@ export default function AccountScreen() {
     >
       <Text style={styles.title}>Tài khoản</Text>
 
-      <ProfileHeader name={displayName} email={displayEmail} level={currentLevel} />
+      <ProfileHeader name={displayName} email={displayEmail} />
 
       {showProgressCard ? (
         <ProfileUpdateWidget
           completedCount={completedTaskCount}
           totalCount={profileTasks.length}
-          level={currentLevel}
           nextTaskTitle={nextTask?.title}
           onPress={() => setModal('progress')}
         />
@@ -439,7 +438,7 @@ export default function AccountScreen() {
       </MenuSection>
 
       <MenuSection title="Thiết lập chung">
-        <MenuItem title="Sổ địa chỉ nhận hàng" icon="map-pin" onPress={openAddressList} />
+        <MenuItem title="Địa chỉ" icon="map-pin" onPress={openAddressList} />
         <MenuItem title="Bảo mật và mật khẩu" icon="shield" onPress={() => setModal('security')} />
         <MenuItem
           title={isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
@@ -455,7 +454,6 @@ export default function AccountScreen() {
         visible={modal === 'progress'}
         onClose={() => setModal(null)}
         tasks={profileTasks}
-        level={currentLevel}
         completedCount={completedTaskCount}
       />
 
@@ -471,7 +469,7 @@ export default function AccountScreen() {
         <AppButton title="Lưu thông tin" onPress={saveProfile} isLoading={loading} />
       </ModalShell>
 
-      <ModalShell visible={modal === 'address'} title="Sổ địa chỉ nhận hàng" onClose={() => setModal(null)}>
+      <ModalShell visible={modal === 'address'} title="Địa chỉ" onClose={() => setModal(null)}>
         {(profile?.addresses?.length ?? 0) > 0 ? (
           profile?.addresses.map((address) => (
             <View

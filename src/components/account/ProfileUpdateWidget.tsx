@@ -9,12 +9,11 @@ import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '
 type Props = {
   completedCount: number;
   totalCount: number;
-  level: number;
   nextTaskTitle?: string;
   onPress: () => void;
 };
 
-export function ProfileUpdateWidget({ completedCount, totalCount, level, nextTaskTitle, onPress }: Props) {
+export function ProfileUpdateWidget({ completedCount, totalCount, nextTaskTitle, onPress }: Props) {
   const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
@@ -22,7 +21,7 @@ export function ProfileUpdateWidget({ completedCount, totalCount, level, nextTas
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Cập nhật thông tin, ${completedCount} trên ${totalCount} mục hoàn thành, cấp độ ${level} trên 3`}
+      accessibilityLabel={`Cập nhật thông tin, ${completedCount} trên ${totalCount} mục hoàn thành`}
       accessibilityHint="Mở danh sách các mục cần cập nhật"
     >
       <View style={styles.headerRow}>
@@ -34,7 +33,7 @@ export function ProfileUpdateWidget({ completedCount, totalCount, level, nextTas
             Cập nhật thông tin
           </Text>
           <Text style={styles.subtitle} numberOfLines={1}>
-            {completedCount}/{totalCount} mục hoàn thành • Cấp độ {level}/3
+            {completedCount}/{totalCount} mục hoàn thành
           </Text>
         </View>
         <Feather name="chevron-right" size={20} color={colors.border} />
