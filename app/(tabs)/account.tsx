@@ -32,15 +32,20 @@ import {
 } from '@/src/features/customer-portal/shared/services/customer-portal.service';
 import { changeCurrentPassword, createLocalPassword, getReferralSaleStaff } from '@/src/features/auth/services/auth.service';
 import type { ReferralStaffOption } from '@/src/features/customer-portal/shared/types/master-data.types';
-import { formatCurrency } from '@/src/shared/lib/utils';
 import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
+import { MenuItem } from '@/src/components/account/MenuItem';
+import { MenuSection } from '@/src/components/account/MenuSection';
+import { ProfileHeader } from '@/src/components/account/ProfileHeader';
+import { ProfileTasksSheet } from '@/src/components/account/ProfileTasksSheet';
+import { ProfileUpdateWidget } from '@/src/components/account/ProfileUpdateWidget';
+import { WalletCard } from '@/src/components/account/WalletCard';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 
-type AccountModal = 'profile' | 'address' | 'security' | 'verify' | 'support' | null;
+type AccountModal = 'progress' | 'profile' | 'address' | 'security' | 'verify' | 'support' | null;
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -387,10 +392,8 @@ export default function AccountScreen() {
   ];
   // Cấp độ là field authoritative từ backend; FE KHÔNG tự suy ra để tránh lệch với hệ thống.
   const currentLevel = profile?.profileCompletionLevel ?? 1;
-  const levelLabel = `Level ${currentLevel}`;
   // Checklist chỉ để hướng dẫn bước còn thiếu và thể hiện tiến độ thao tác của người dùng.
   const completedTaskCount = profileTasks.filter((task) => task.completed).length;
-  const taskProgressPercent = Math.round((completedTaskCount / profileTasks.length) * 100);
   const nextTask = profileTasks.find((task) => !task.completed);
   const showProgressCard = currentLevel < 3;
 
@@ -412,100 +415,47 @@ export default function AccountScreen() {
     >
       <Text style={styles.title}>Tài khoản</Text>
 
-      <View style={styles.profileCard}>
-        <View style={styles.avatarContainer}>
-          <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
-        </View>
-        <View style={styles.profileInfo}>
-          <Text style={styles.userName}>{displayName}</Text>
-          <Text style={styles.userEmail}>{displayEmail}</Text>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>Cấp độ {currentLevel}/3</Text>
-          </View>
-        </View>
-      </View>
+      <ProfileHeader name={displayName} email={displayEmail} />
 
       {showProgressCard ? (
-        <View style={styles.progressCard}>
-          <View style={styles.progressHeader}>
-            <View style={styles.progressContent}>
-              <Text style={styles.progressTitle}>Tiến độ lên level 3</Text>
-              <Text style={styles.progressSubtitle}>
-                {completedTaskCount}/{profileTasks.length} nhiệm vụ hoàn thành • {levelLabel}
-              </Text>
-            </View>
-            <Text style={styles.progressPercent}>{taskProgressPercent}%</Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${taskProgressPercent}%` }]} />
-          </View>
-          <Text style={styles.progressHint}>
-            {nextTask
-              ? `Nhiệm vụ tiếp theo: ${nextTask.title}. Hệ thống sẽ tự cập nhật cấp độ khi bạn hoàn thành.`
-              : 'Bạn đã hoàn thành các nhiệm vụ gợi ý. Hệ thống sẽ tự cập nhật cấp độ.'}
-          </Text>
-          <View style={styles.taskList}>
-            {profileTasks.map((task) => (
-              <Pressable
-                key={task.key}
-                style={[styles.taskItem, task.completed && styles.taskItemDone]}
-                onPress={task.action}
-              >
-                <View style={[styles.taskIconWrap, task.completed && styles.taskIconWrapDone]}>
-                  <Feather
-                    name={task.completed ? 'check' : 'arrow-up-right'}
-                    size={15}
-                    color={task.completed ? colors.successText : colors.primaryDark}
-                  />
-                </View>
-                <View style={styles.taskContent}>
-                  <Text style={[styles.taskTitle, task.completed && styles.taskTitleDone]}>{task.title}</Text>
-                  <Text style={styles.taskDetail}>{task.detail}</Text>
-                </View>
-                <Text style={[styles.taskStatus, task.completed && styles.taskStatusDone]}>
-                  {task.completed ? 'Hoàn thành' : 'Thực hiện'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+        <ProfileUpdateWidget
+          completedCount={completedTaskCount}
+          totalCount={profileTasks.length}
+          nextTaskTitle={nextTask?.title}
+          onPress={() => setModal('progress')}
+        />
       ) : null}
 
-      <View style={styles.walletCard}>
-        <View style={styles.walletRow}>
-          <View style={styles.walletIcon}>
-            <Feather name="credit-card" size={20} color={colors.primaryDark} />
-          </View>
-          <View style={styles.walletInfo}>
-            <Text style={styles.walletLabel}>Số dư khả dụng</Text>
-            <Text style={styles.walletAmount}>{formatCurrency(profile?.balance ?? 0)}</Text>
-          </View>
-          <Pressable
-            style={styles.depositBtn}
-            onPress={() => Alert.alert('Nạp tiền', 'Vui lòng liên hệ nhân viên phụ trách để được hướng dẫn nạp tiền.')}
-          >
-            <Text style={styles.depositText}>Nạp tiền</Text>
-          </Pressable>
-        </View>
-      </View>
+      <WalletCard
+        balance={profile?.balance ?? 0}
+        onDeposit={() => Alert.alert('Nạp tiền', 'Vui lòng liên hệ nhân viên phụ trách để được hướng dẫn nạp tiền.')}
+      />
 
-      <View style={styles.menuContainer}>
+      <MenuSection title="Tài khoản của tôi">
         <MenuItem title="Thông tin cá nhân" icon="user" onPress={() => setModal('profile')} />
-        <MenuItem title="Địa chỉ" icon="map-pin" onPress={openAddressList} />
         <MenuItem title="Xác minh tài khoản" icon="check-circle" onPress={() => setModal('verify')} />
-        <MenuItem title="Bảo mật và mật khẩu" icon="shield" onPress={() => setModal('security')} />
         <MenuItem title="Nhân viên hỗ trợ" icon="help-circle" onPress={() => setModal('support')} isLast />
-      </View>
+      </MenuSection>
 
-      <Pressable
-        style={[styles.logoutBtn, isLoggingOut && styles.logoutBtnDisabled]}
-        onPress={handleLogoutNow}
-        disabled={isLoggingOut}
-        hitSlop={12}
-      >
-        <Feather name="log-out" size={18} color={colors.error} />
-        <Text style={styles.logoutText}>{isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}</Text>
-      </Pressable>
+      <MenuSection title="Thiết lập chung">
+        <MenuItem title="Địa chỉ" icon="map-pin" onPress={openAddressList} />
+        <MenuItem title="Bảo mật và mật khẩu" icon="shield" onPress={() => setModal('security')} />
+        <MenuItem
+          title={isLoggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
+          icon="log-out"
+          variant="danger"
+          onPress={handleLogoutNow}
+          disabled={isLoggingOut}
+          isLast
+        />
+      </MenuSection>
+
+      <ProfileTasksSheet
+        visible={modal === 'progress'}
+        onClose={() => setModal(null)}
+        tasks={profileTasks}
+        completedCount={completedTaskCount}
+      />
 
       <ModalShell visible={modal === 'profile'} title="Thông tin cá nhân" onClose={() => setModal(null)}>
         <AppInput label="Họ tên" value={name} onChangeText={setName} />
@@ -519,7 +469,7 @@ export default function AccountScreen() {
         <AppButton title="Lưu thông tin" onPress={saveProfile} isLoading={loading} />
       </ModalShell>
 
-      <ModalShell visible={modal === 'address'} title="Địa Chỉ" onClose={() => setModal(null)}>
+      <ModalShell visible={modal === 'address'} title="Địa chỉ" onClose={() => setModal(null)}>
         {(profile?.addresses?.length ?? 0) > 0 ? (
           profile?.addresses.map((address) => (
             <View
@@ -654,30 +604,6 @@ export default function AccountScreen() {
   );
 }
 
-function MenuItem({
-  title,
-  icon,
-  onPress,
-  isLast = false,
-}: {
-  title: string;
-  icon: keyof typeof Feather.glyphMap;
-  onPress: () => void;
-  isLast?: boolean;
-}) {
-  return (
-    <Pressable style={[styles.menuItem, !isLast && styles.menuItemBorder]} onPress={onPress}>
-      <View style={styles.menuItemLeft}>
-        <View style={styles.menuIconBg}>
-          <Feather name={icon} size={18} color={colors.textSecondary} />
-        </View>
-        <Text style={styles.menuTitle}>{title}</Text>
-      </View>
-      <Feather name="chevron-right" size={20} color={colors.border} />
-    </Pressable>
-  );
-}
-
 function PasswordInput({
   label,
   value,
@@ -732,282 +658,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilyForWeight('900'),
     color: colors.textPrimary,
     marginBottom: spacing.md,
-    textTransform: 'uppercase',
-  },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  avatarContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  avatarText: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.black,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: typography.fontSize.md,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  userEmail: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  levelBadge: {
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    alignSelf: 'flex-start',
-  },
-  levelText: {
-    fontSize: 10,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.primaryDark,
-    textTransform: 'uppercase',
-  },
-  progressCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: borderRadius['2xl'],
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    marginBottom: spacing.md,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  progressContent: {
-    flex: 1,
-  },
-  progressTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.textPrimary,
-    textTransform: 'uppercase',
-  },
-  progressSubtitle: {
-    marginTop: spacing.xs,
-    color: colors.textSecondary,
-    fontSize: typography.fontSize.xs,
-    fontWeight: '700',
-    fontFamily: fontFamilyForWeight('700'),
-  },
-  progressPercent: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.primaryDark,
-  },
-  progressTrack: {
-    height: 10,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background,
-    overflow: 'hidden',
-    marginTop: spacing.md,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-  },
-  progressHint: {
-    marginTop: spacing.md,
-    color: colors.textSecondary,
-    fontSize: typography.fontSize.sm,
-    fontWeight: '700',
-    fontFamily: fontFamilyForWeight('700'),
-    lineHeight: 20,
-  },
-  taskList: {
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  taskItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  taskItemDone: {
-    backgroundColor: colors.successLight,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  taskIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  taskIconWrapDone: {
-    backgroundColor: colors.white,
-  },
-  taskContent: {
-    flex: 1,
-  },
-  taskTitle: {
-    color: colors.textPrimary,
-    fontWeight: '800',
-    fontFamily: fontFamilyForWeight('800'),
-    fontSize: typography.fontSize.sm,
-  },
-  taskTitleDone: {
-    color: colors.successText,
-  },
-  taskDetail: {
-    marginTop: 2,
-    color: colors.textSecondary,
-    fontSize: typography.fontSize.xs,
-    lineHeight: 16,
-  },
-  taskStatus: {
-    color: colors.primaryDark,
-    fontSize: typography.fontSize.xs,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    textTransform: 'uppercase',
-  },
-  taskStatusDone: {
-    color: colors.successText,
-  },
-  walletCard: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius['2xl'],
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    marginBottom: spacing.md,
-  },
-  walletRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  walletIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  walletInfo: {
-    flex: 1,
-  },
-  walletLabel: {
-    fontSize: 10,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.textSecondary,
-    marginBottom: 2,
-    textTransform: 'uppercase',
-  },
-  walletAmount: {
-    fontSize: typography.fontSize.md,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.textPrimary,
-  },
-  depositBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.md,
-  },
-  depositText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.black,
-    textTransform: 'uppercase',
-  },
-  menuContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius['2xl'],
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    overflow: 'hidden',
-    marginBottom: spacing.md,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 48,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  menuItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  menuIconBg: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  menuTitle: {
-    flex: 1,
-    fontSize: typography.fontSize.sm,
-    fontWeight: '800',
-    fontFamily: fontFamilyForWeight('800'),
-    color: colors.textPrimary,
-  },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 46,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.errorLight,
-    borderRadius: borderRadius['2xl'],
-    gap: spacing.sm,
-  },
-  logoutBtnDisabled: {
-    opacity: 0.65,
-  },
-  logoutText: {
-    color: colors.error,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
     textTransform: 'uppercase',
   },
   helperText: {
