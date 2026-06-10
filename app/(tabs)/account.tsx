@@ -477,7 +477,7 @@ export default function AccountScreen() {
             <Feather name="credit-card" size={20} color={colors.primaryDark} />
           </View>
           <View style={styles.walletInfo}>
-            <Text style={styles.walletLabel}>Số dư khả dụng</Text>
+            <Text style={styles.walletLabel}>Số dư ví</Text>
             <Text style={styles.walletAmount}>{formatCurrency(profile?.balance ?? 0)}</Text>
           </View>
           <Pressable
@@ -491,7 +491,7 @@ export default function AccountScreen() {
 
       <View style={styles.menuContainer}>
         <MenuItem title="Thông tin cá nhân" icon="user" onPress={() => setModal('profile')} />
-        <MenuItem title="Địa chỉ" icon="map-pin" onPress={openAddressList} />
+        <MenuItem title="Sổ địa chỉ nhận hàng" icon="map-pin" onPress={openAddressList} />
         <MenuItem title="Xác minh tài khoản" icon="check-circle" onPress={() => setModal('verify')} />
         <MenuItem title="Bảo mật và mật khẩu" icon="shield" onPress={() => setModal('security')} />
         <MenuItem title="Nhân viên hỗ trợ" icon="help-circle" onPress={() => setModal('support')} isLast />
@@ -519,7 +519,7 @@ export default function AccountScreen() {
         <AppButton title="Lưu thông tin" onPress={saveProfile} isLoading={loading} />
       </ModalShell>
 
-      <ModalShell visible={modal === 'address'} title="Địa Chỉ" onClose={() => setModal(null)}>
+      <ModalShell visible={modal === 'address'} title="Sổ địa chỉ nhận hàng" onClose={() => setModal(null)}>
         {(profile?.addresses?.length ?? 0) > 0 ? (
           profile?.addresses.map((address) => (
             <View
