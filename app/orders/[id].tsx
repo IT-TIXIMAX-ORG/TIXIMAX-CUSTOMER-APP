@@ -284,6 +284,11 @@ export default function OrderDetailScreen() {
   const hasSuccessfulProductSession = successfulProductSessions.length > 0;
   const hasShippingSessions = shippingSessions.length > 0;
   const settledProductSessions = settledSessions.filter(isProductPaymentSession);
+  // Đợt tiền hàng cần thanh toán để hiện QR: ẩn khi đơn đã hủy, hoặc khi số tiền = 0
+  // (freeship/voucher 100% — backend tự chuyển trạng thái, FE không hiện QR rỗng).
+  const payablePendingSessions = isCancelled
+    ? []
+    : pendingNonShippingSessions.filter((session) => session.amount !== 0);
   const orderStatusKey = normalizeLabelKey(order.status);
   const resolvedProductPaid =
     (
@@ -425,11 +430,11 @@ export default function OrderDetailScreen() {
           </AppCard>
 
 
-          {pendingNonShippingSessions.length ? (
-            pendingNonShippingSessions.map((session, index) => (
+          {payablePendingSessions.length ? (
+            payablePendingSessions.map((session, index) => (
               <PaymentSessionCard key={sessionKey(session, index)} session={session} onViewImage={openImage} isPending />
             ))
-          ) : !hasShippingSessions && !settledProductSessions.length ? (
+          ) : !isCancelled && !hasShippingSessions && !settledProductSessions.length ? (
             <Text style={styles.mutedText}>Không có khoản cần thanh toán.</Text>
           ) : null}
 
@@ -522,7 +527,7 @@ export default function OrderDetailScreen() {
                       key={sessionKey(session, index)}
                       session={session}
                       onViewImage={openImage}
-                      isPending={isPendingSession(session.status)}
+                      isPending={!isCancelled && isPendingSession(session.status)}
                     />
                   ))}
                 </View>
