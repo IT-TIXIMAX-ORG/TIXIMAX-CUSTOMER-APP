@@ -879,6 +879,25 @@ function InfoRow({ label, value, highlight }: { label: string; value: string; hi
   );
 }
 
+function CopyableInfoRow({ label, value, toastText }: { label: string; value: string; toastText: string }) {
+  return (
+    <Pressable
+      style={styles.detailRow}
+      accessibilityRole="button"
+      onPress={async () => {
+        await Clipboard.setStringAsync(value);
+        Toast.show({ type: 'success', text1: toastText });
+      }}
+    >
+      <Text style={styles.detailLabel}>{label}</Text>
+      <View style={styles.copyValueWrap}>
+        <Text style={[styles.detailValue, styles.copyValueText]}>{value}</Text>
+        <Feather name="copy" size={11} color={colors.primaryDark} />
+      </View>
+    </Pressable>
+  );
+}
+
 function BdRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
     <View style={styles.bdRow}>
@@ -904,6 +923,11 @@ function PaymentSessionCard({
   const purposeLabel = isShippingPaymentSession(session)
     ? 'Thanh toán vận chuyển'
     : transactionPurposeLabel(session.purpose || session.paymentType);
+
+  // QR: skeleton trong lúc tải (chống layout shift) + ẩn hẳn nếu ảnh lỗi (không hiện icon vỡ).
+  const [qrLoading, setQrLoading] = useState(true);
+  const [qrError, setQrError] = useState(false);
+  const showQr = Boolean(session.qrCode) && !qrError;
 
   return (
     <AppCard style={[styles.qrCard, embedded && styles.qrCardEmbedded]}>
@@ -935,23 +959,45 @@ function PaymentSessionCard({
           </Pressable>
         ) : null}
 
-        {/* Amount row */}
+        {/* Amount row — tap to copy số tiền (số thuần, dán thẳng vào app ngân hàng) */}
         {session.amount != null ? (
-          <View style={styles.paymentInfoRow}>
+          <Pressable
+            style={styles.paymentInfoRow}
+            onPress={async () => {
+              await Clipboard.setStringAsync(String(session.amount));
+              Toast.show({ type: 'success', text1: 'Đã copy số tiền' });
+            }}
+          >
             <Text style={styles.paymentInfoLabel}>Số tiền chuyển khoản:</Text>
-            <Text style={styles.paymentInfoValueBold}>{formatCurrency(session.amount)}</Text>
-          </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={styles.paymentInfoValueBold}>{formatCurrency(session.amount)}</Text>
+              <Feather name="copy" size={11} color={colors.primaryDark} />
+            </View>
+          </Pressable>
         ) : null}
 
-        {/* QR Code — always visible, amber border if pending */}
-        {session.qrCode ? (
+        {/* QR Code — skeleton trong lúc tải, ẩn hẳn nếu ảnh lỗi; viền cam nếu đang chờ */}
+        {showQr ? (
           <View style={[styles.qrCenterBox, isPending && styles.qrCenterBoxActive]}>
             <Pressable onPress={() => onViewImage(session.qrCode!)}>
-              <Image
-                source={{ uri: session.qrCode }}
-                style={styles.qrImageSquare}
-                resizeMode="contain"
-              />
+              <View style={styles.qrImageSquare}>
+                <Image
+                  source={{ uri: session.qrCode! }}
+                  style={styles.qrImageFill}
+                  resizeMode="contain"
+                  onLoadStart={() => setQrLoading(true)}
+                  onLoadEnd={() => setQrLoading(false)}
+                  onError={() => {
+                    setQrLoading(false);
+                    setQrError(true);
+                  }}
+                />
+                {qrLoading ? (
+                  <View style={styles.qrSkeleton}>
+                    <ActivityIndicator color={colors.primary} />
+                  </View>
+                ) : null}
+              </View>
             </Pressable>
             <Text style={styles.qrCenterHint}>
               {isPending ? 'Nhấn để phóng to · Quét để thanh toán' : 'Nhấn để phóng to'}
@@ -960,9 +1006,9 @@ function PaymentSessionCard({
         ) : null}
 
         {/* Action buttons: Xem QR + Sao chép CK */}
-        {(session.qrCode || session.content) ? (
+        {(showQr || session.content) ? (
           <View style={styles.qrBtnRow}>
-            {session.qrCode ? (
+            {showQr ? (
               <Pressable
                 style={styles.qrBtnPrimary}
                 onPress={() => onViewImage(session.qrCode!)}
@@ -991,7 +1037,11 @@ function PaymentSessionCard({
       {session.bankAccount ? (
         <View style={styles.bankBox}>
           <InfoRow label="Ngân hàng" value={session.bankAccount.bankName} />
-          <InfoRow label="Số tài khoản" value={session.bankAccount.accountNumber} />
+          <CopyableInfoRow
+            label="Số tài khoản"
+            value={session.bankAccount.accountNumber}
+            toastText="Đã copy số tài khoản"
+          />
           <InfoRow label="Chủ tài khoản" value={session.bankAccount.accountHolder} />
         </View>
       ) : null}
@@ -1335,6 +1385,16 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '800',
     fontFamily: fontFamilyForWeight('800'),
+  },
+  copyValueWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+  },
+  copyValueText: {
+    flex: 0,
   },
   detailRowHighlight: {
     borderTopWidth: 1,
@@ -1712,6 +1772,23 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qrImageFill: {
+    width: '100%',
+    height: '100%',
+  },
+  qrSkeleton: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
   },
   qrCenterHint: {
     fontSize: 10,
