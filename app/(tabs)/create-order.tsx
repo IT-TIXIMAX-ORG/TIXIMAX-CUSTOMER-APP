@@ -14,6 +14,8 @@ import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useQueryClient } from '@tanstack/react-query';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
 import { AppInput } from '@/src/components/ui/AppInput';
@@ -21,6 +23,8 @@ import { AppButton } from '@/src/components/ui/AppButton';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { ErrorState } from '@/src/components/ui/ErrorState';
+import { FormInput } from '@/src/components/form/FormInput';
+import { FormSelect } from '@/src/components/form/FormSelect';
 import { useCustomerProfile } from '@/src/features/customer-portal/shared/hooks/use-customer-profile';
 import { useCreateOrderMasterData } from '@/src/features/customer-portal/shared/hooks/use-create-order-master-data';
 import { addCustomerAddress } from '@/src/features/customer-portal/shared/services/customer-portal.service';
@@ -31,36 +35,17 @@ import {
 import { uploadImageUri } from '@/src/shared/services/upload-image.service';
 import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
 import { formatCurrency, parseNumberInput } from '@/src/shared/lib/utils';
-
-type OrderTypeId = 'MUA_HO' | 'KY_GUI';
-
-interface ProductLine {
-  productName: string;
-  productLink: string;
-  website: string;
-  productTypeId: string;
-  quantity: string;
-  priceWeb: string;
-  shipWeb: string;
-  shipmentCode: string;
-  extraCharge: string;
-  note: string;
-  imageUri?: string;
-  imageId?: string;
-}
-
-const emptyLine = (): ProductLine => ({
-  productName: '',
-  productLink: '',
-  website: '',
-  productTypeId: '',
-  quantity: '1',
-  priceWeb: '',
-  shipWeb: '',
-  shipmentCode: '',
-  extraCharge: '',
-  note: '',
-});
+import {
+  createOrderSchema,
+  blankOrderValues,
+  emptyProductLine,
+  type CreateOrderForm,
+  type OrderTypeId,
+} from '@/src/features/customer-portal/shared/schemas/create-order.schemas';
+import {
+  addressSchema,
+  type AddressForm,
+} from '@/src/features/customer-portal/shared/schemas/account.schemas';
 
 const orderTypes: Array<{
   id: OrderTypeId;
@@ -88,24 +73,33 @@ export default function CreateOrderScreen() {
   const contentPaddingTop = useScreenContentTopPadding(spacing.base);
   const { data: profile, refetch: refetchProfile } = useCustomerProfile();
   const [selectedType, setSelectedType] = useState<OrderTypeId | null>(null);
-  const [routeId, setRouteId] = useState('');
-  const [addressId, setAddressId] = useState('');
-  const [serviceType, setServiceType] = useState('CLEAN');
-  const [exchangeRate, setExchangeRate] = useState('');
-  const [priceShip, setPriceShip] = useState('');
-  const [checkRequired, setCheckRequired] = useState(false);
-  const [lines, setLines] = useState<ProductLine[]>([emptyLine()]);
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isAddressEditorOpen, setIsAddressEditorOpen] = useState(false);
   const [isAddressConfirmOpen, setIsAddressConfirmOpen] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
-  const [newAddressProvince, setNewAddressProvince] = useState('');
-  const [newAddressWard, setNewAddressWard] = useState('');
-  const [newAddressStreet, setNewAddressStreet] = useState('');
   const isPurchaseOrder = selectedType === 'MUA_HO';
   const isConsignmentOrder = selectedType === 'KY_GUI';
   const showRouteSection = isPurchaseOrder || isConsignmentOrder;
+
+  // ===== Form chính (react-hook-form + Zod, validate line theo orderType qua superRefine) =====
+  const form = useForm<CreateOrderForm>({
+    resolver: zodResolver(createOrderSchema),
+    mode: 'onChange',
+    defaultValues: blankOrderValues('MUA_HO'),
+  });
+  const { fields, append, remove } = useFieldArray({ control: form.control, name: 'lines' });
+  const routeId = form.watch('routeId');
+  const serviceType = form.watch('serviceType');
+  const checkRequired = form.watch('checkRequired');
+
+  // Form thêm địa chỉ mới (modal lồng) — tái dùng schema địa chỉ của màn Tài khoản.
+  const newAddressForm = useForm<AddressForm>({
+    resolver: zodResolver(addressSchema),
+    mode: 'onChange',
+    defaultValues: { province: '', ward: '', street: '' },
+  });
+  const newAddressValues = newAddressForm.watch();
 
   const {
     routes,
@@ -121,9 +115,10 @@ export default function CreateOrderScreen() {
     if (routeId || routes.length === 0) return;
 
     const defaultRoute = routes[0];
-    setRouteId(String(defaultRoute.routeId));
-    setExchangeRate(String(defaultRoute.exchangeRate ?? ''));
-    setPriceShip(String(defaultRoute.shippingFee ?? ''));
+    form.setValue('routeId', String(defaultRoute.routeId), { shouldValidate: true });
+    form.setValue('exchangeRate', String(defaultRoute.exchangeRate ?? ''), { shouldValidate: true });
+    form.setValue('priceShip', String(defaultRoute.shippingFee ?? ''), { shouldValidate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showRouteSection, routeId, routes]);
 
   const routeOptions = routes.map((route) => ({
@@ -147,50 +142,15 @@ export default function CreateOrderScreen() {
     () => orderTypes.find((type) => type.id === selectedType)?.title ?? '',
     [selectedType],
   );
-  const newAddressText = [newAddressStreet.trim(), newAddressWard.trim(), newAddressProvince.trim()]
+  const newAddressText = [newAddressValues.street.trim(), newAddressValues.ward.trim(), newAddressValues.province.trim()]
     .filter(Boolean)
     .join(', ');
 
   const resetAddressCreation = () => {
-    setNewAddressProvince('');
-    setNewAddressWard('');
-    setNewAddressStreet('');
+    newAddressForm.reset({ province: '', ward: '', street: '' });
     setIsAddressEditorOpen(false);
     setIsAddressConfirmOpen(false);
   };
-
-  const resetForm = () => {
-    setRouteId('');
-    setAddressId('');
-    setServiceType('CLEAN');
-    setExchangeRate('');
-    setPriceShip('');
-    setCheckRequired(false);
-    setLines([emptyLine()]);
-    resetAddressCreation();
-  };
-
-  const buildPurchaseLinks = () =>
-    lines.map((line) => ({
-      productLink: line.productLink.trim(),
-      quantity: parseNumberInput(line.quantity),
-      priceWeb: parseNumberInput(line.priceWeb),
-      productName: line.productName.trim(),
-      productTypeId: line.productTypeId,
-      website: line.website.trim(),
-    }));
-
-  const buildConsignmentLinks = () =>
-    lines.map((line) => ({
-      quantity: parseNumberInput(line.quantity),
-      productName: line.productName.trim(),
-      productTypeId: line.productTypeId,
-      extraCharge: getProductTypeExtraCharge(line.productTypeId),
-      shipmentCode: line.shipmentCode.trim(),
-      differentFee: 0,
-      purchaseImageId: line.imageId,
-      note: line.note.trim(),
-    }));
 
   const handleSelectType = (type: (typeof orderTypes)[number]) => {
     // Temporarily keep consignment visible but disable entry until the feature is ready.
@@ -199,7 +159,8 @@ export default function CreateOrderScreen() {
       return;
     }
 
-    resetForm();
+    form.reset(blankOrderValues(type.id));
+    resetAddressCreation();
     setSelectedType(type.id);
   };
 
@@ -208,25 +169,21 @@ export default function CreateOrderScreen() {
     setIsAddressEditorOpen(true);
   };
 
-  const reviewNewAddress = () => {
-    if (!newAddressProvince.trim() || !newAddressWard.trim() || !newAddressStreet.trim()) {
-      Toast.show({ type: 'error', text1: 'Vui lòng nhập đầy đủ địa chỉ mới' });
-      return;
-    }
-
+  const onReviewNewAddress = newAddressForm.handleSubmit(() => {
     setIsAddressEditorOpen(false);
     setIsAddressConfirmOpen(true);
-  };
+  });
 
   const confirmCreateAddress = async () => {
+    const values = newAddressForm.getValues();
     const previousAddressIds = new Set((profile?.addresses ?? []).map((item) => String(item.addressId)));
 
     try {
       setIsSavingAddress(true);
       await addCustomerAddress({
-        province: newAddressProvince.trim(),
-        ward: newAddressWard.trim(),
-        street: newAddressStreet.trim(),
+        province: values.province.trim(),
+        ward: values.ward.trim(),
+        street: values.street.trim(),
       });
 
       const refreshed = await refetchProfile();
@@ -235,13 +192,13 @@ export default function CreateOrderScreen() {
         addresses.find((item) => !previousAddressIds.has(String(item.addressId))) ??
         addresses.find(
           (item) =>
-            (item.province ?? '').trim() === newAddressProvince.trim() &&
-            (item.ward ?? '').trim() === newAddressWard.trim() &&
-            (item.streetAddress ?? '').trim() === newAddressStreet.trim(),
+            (item.province ?? '').trim() === values.province.trim() &&
+            (item.ward ?? '').trim() === values.ward.trim() &&
+            (item.streetAddress ?? '').trim() === values.street.trim(),
         );
 
       if (createdAddress?.addressId) {
-        setAddressId(String(createdAddress.addressId));
+        form.setValue('addressId', String(createdAddress.addressId), { shouldValidate: true });
       }
 
       resetAddressCreation();
@@ -253,11 +210,7 @@ export default function CreateOrderScreen() {
     }
   };
 
-  const setLine = (index: number, updates: Partial<ProductLine>) => {
-    setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...updates } : line)));
-  };
-
-  const pickImage = async (index?: number) => {
+  const pickImage = async (index: number) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Toast.show({ type: 'error', text1: 'Cần quyền truy cập thư viện ảnh' });
@@ -273,155 +226,108 @@ export default function CreateOrderScreen() {
     const uri = result.assets[0].uri;
     try {
       const uploaded = await uploadImageUri(uri, 'orders');
-      if (typeof index === 'number') setLine(index, { imageUri: uri, imageId: uploaded.id });
+      form.setValue(`lines.${index}.imageUri`, uri);
+      form.setValue(`lines.${index}.imageId`, uploaded.id);
       Toast.show({ type: 'success', text1: 'Đã tải ảnh lên' });
     } catch (error: any) {
       Toast.show({ type: 'error', text1: error?.message || 'Tải ảnh thất bại' });
     }
   };
 
-  const validateCommon = () => {
-    if (showRouteSection && (masterDataError || routes.length === 0)) {
-      return 'Chưa tải được dữ liệu tuyến và loại hàng. Vui lòng thử lại.';
-    }
-    if (!addressId) return 'Vui lòng chọn địa chỉ nhận hàng.';
-    if (!routeId) return 'Vui lòng chọn tuyến vận chuyển.';
-    if (!exchangeRate || parseNumberInput(exchangeRate) <= 0) return 'Vui lòng nhập tỷ giá hợp lệ.';
-    if (!priceShip || parseNumberInput(priceShip) < 0) return 'Vui lòng nhập cước vận chuyển.';
-    return '';
-  };
+  // Master-data là trạng thái async, không thuộc form values → guard riêng ngoài schema.
+  const masterDataGuardError = () =>
+    showRouteSection && (masterDataError || routes.length === 0)
+      ? 'Chưa tải được dữ liệu tuyến và loại hàng. Vui lòng thử lại.'
+      : '';
 
-  const validateLines = () => {
-    for (const [index, line] of lines.entries()) {
-      const prefix = `Sản phẩm ${index + 1}:`;
-      if (isPurchaseOrder) {
-        if (!line.productLink.trim()) return `${prefix} thiếu link sản phẩm.`;
-        if (!line.productName.trim()) return `${prefix} thiếu tên sản phẩm.`;
-        if (!line.productTypeId) return `${prefix} thiếu loại sản phẩm.`;
-        if (parseNumberInput(line.quantity) <= 0) return `${prefix} số lượng không hợp lệ.`;
-        if (parseNumberInput(line.priceWeb) < 0) return `${prefix} giá web không hợp lệ.`;
-        if (!line.website.trim()) return `${prefix} thiếu website.`;
-        continue;
-      }
-      if (!line.productName.trim()) return `${prefix} thiếu tên sản phẩm.`;
-      if (!line.productTypeId) return `${prefix} thiếu loại sản phẩm.`;
-      if (parseNumberInput(line.quantity) <= 0) return `${prefix} số lượng không hợp lệ.`;
-    }
-    return '';
-  };
+  const buildPurchaseLinks = (values: CreateOrderForm) =>
+    values.lines.map((line) => ({
+      productLink: line.productLink.trim(),
+      quantity: parseNumberInput(line.quantity),
+      priceWeb: parseNumberInput(line.priceWeb),
+      productName: line.productName.trim(),
+      productTypeId: line.productTypeId,
+      website: line.website.trim(),
+    }));
 
-  const submitOrder = async () => {
-    const commonError = validateCommon();
-    if (commonError) {
-      Alert.alert('Thiếu thông tin', commonError);
-      return;
-    }
+  const buildConsignmentLinks = (values: CreateOrderForm) =>
+    values.lines.map((line) => ({
+      quantity: parseNumberInput(line.quantity),
+      productName: line.productName.trim(),
+      productTypeId: line.productTypeId,
+      extraCharge: getProductTypeExtraCharge(line.productTypeId),
+      shipmentCode: line.shipmentCode.trim(),
+      differentFee: 0,
+      purchaseImageId: line.imageId,
+      note: line.note.trim(),
+    }));
 
-    const lineError = validateLines();
-    if (lineError) {
-      Alert.alert('Thiếu thông tin', lineError);
-      return;
-    }
-
-    Alert.alert('Xác nhận tạo đơn', `Tạo đơn ${selectedTitle}?`, [
-      { text: 'Kiểm tra lại', style: 'cancel' },
-      {
-        text: 'Tạo đơn',
-        onPress: async () => {
-          try {
-            setSubmitting(true);
-            if (selectedType === 'MUA_HO') {
-              await createCustomerPurchaseOrder({
-                addressId,
-                routeId,
-                exchangeRate: parseNumberInput(exchangeRate),
-                priceShip: parseNumberInput(priceShip),
-                serviceType,
-                checkRequired,
-                purchaseLinks: buildPurchaseLinks(),
-              });
-            } else if (selectedType === 'KY_GUI') {
-              await createCustomerDepositOrder({
-                routeId,
-                addressId,
-                exchangeRate: parseNumberInput(exchangeRate),
-                priceShip: parseNumberInput(priceShip),
-                serviceType,
-                checkRequired,
-                consignmentLinks: buildConsignmentLinks(),
-              });
-            }
-            await queryClient.invalidateQueries({ queryKey: ['customer-portal', 'orders'] });
-            Toast.show({ type: 'success', text1: 'Đã tạo đơn thành công' });
-            setSelectedType(null);
-            resetForm();
-          } catch (error: any) {
-            Toast.show({ type: 'error', text1: error?.response?.data?.message || error?.message || 'Tạo đơn thất bại' });
-          } finally {
-            setSubmitting(false);
-          }
-        },
-      },
-    ]);
-  };
-
-  const submitOrderForWeb = async (confirmed = false) => {
-    if (submitting) return;
-
-    const commonError = validateCommon();
-    if (commonError) {
-      Toast.show({ type: 'error', text1: 'Thiếu thông tin', text2: commonError });
-      return;
-    }
-
-    const lineError = validateLines();
-    if (lineError) {
-      Toast.show({ type: 'error', text1: 'Thiếu thông tin', text2: lineError });
-      return;
-    }
-
-    if (!confirmed) {
-      setConfirmOpen(true);
-      return;
-    }
-
+  const doSubmit = async (values: CreateOrderForm) => {
     try {
       setSubmitting(true);
-      if (selectedType === 'MUA_HO') {
+      if (values.orderType === 'MUA_HO') {
         await createCustomerPurchaseOrder({
-          addressId,
-          routeId,
-          exchangeRate: parseNumberInput(exchangeRate),
-          priceShip: parseNumberInput(priceShip),
-          serviceType,
-          checkRequired,
-          purchaseLinks: buildPurchaseLinks(),
+          addressId: values.addressId,
+          routeId: values.routeId,
+          exchangeRate: parseNumberInput(values.exchangeRate),
+          priceShip: parseNumberInput(values.priceShip),
+          serviceType: values.serviceType,
+          checkRequired: values.checkRequired,
+          purchaseLinks: buildPurchaseLinks(values),
         });
-      } else if (selectedType === 'KY_GUI') {
+      } else {
         await createCustomerDepositOrder({
-          routeId,
-          addressId,
-          exchangeRate: parseNumberInput(exchangeRate),
-          priceShip: parseNumberInput(priceShip),
-          serviceType,
-          checkRequired,
-          consignmentLinks: buildConsignmentLinks(),
+          routeId: values.routeId,
+          addressId: values.addressId,
+          exchangeRate: parseNumberInput(values.exchangeRate),
+          priceShip: parseNumberInput(values.priceShip),
+          serviceType: values.serviceType,
+          checkRequired: values.checkRequired,
+          consignmentLinks: buildConsignmentLinks(values),
         });
       }
-
       await queryClient.invalidateQueries({ queryKey: ['customer-portal', 'orders'] });
       Toast.show({ type: 'success', text1: 'Đã tạo đơn thành công' });
       setSelectedType(null);
-      resetForm();
+      form.reset(blankOrderValues(values.orderType));
+      resetAddressCreation();
     } catch (error: any) {
-      Toast.show({
-        type: 'error',
-        text1: error?.response?.data?.message || error?.message || 'Tạo đơn thất bại',
-      });
+      Toast.show({ type: 'error', text1: error?.response?.data?.message || error?.message || 'Tạo đơn thất bại' });
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Nút submit KHÔNG disable theo isValid: form dài, lỗi field chỉ hiện sau khi chạm —
+  // bấm nút sẽ hiện toàn bộ lỗi đỏ dưới field + Toast nhắc, thay vì nút im lặng bị khóa.
+  const onSubmit = form.handleSubmit(
+    (values) => {
+      const guard = masterDataGuardError();
+      if (guard) {
+        if (Platform.OS === 'web') Toast.show({ type: 'error', text1: 'Thiếu thông tin', text2: guard });
+        else Alert.alert('Thiếu thông tin', guard);
+        return;
+      }
+
+      if (Platform.OS === 'web') {
+        setConfirmOpen(true);
+        return;
+      }
+
+      Alert.alert('Xác nhận tạo đơn', `Tạo đơn ${selectedTitle}?`, [
+        { text: 'Kiểm tra lại', style: 'cancel' },
+        { text: 'Tạo đơn', onPress: () => void doSubmit(values) },
+      ]);
+    },
+    () => {
+      const guard = masterDataGuardError();
+      Toast.show({
+        type: 'error',
+        text1: 'Thiếu thông tin',
+        text2: guard || 'Vui lòng kiểm tra các trường được đánh dấu đỏ.',
+      });
+    },
+  );
 
   if (isInitialLoading && selectedType) {
     return (
@@ -451,7 +357,7 @@ export default function CreateOrderScreen() {
           <Text style={styles.title}>Tạo đơn {selectedTitle}</Text>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Địa chỉ</Text>
-            <SelectSheet label="Địa chỉ" value={addressId} options={addressOptions} onChange={setAddressId} />
+            <FormSelect control={form.control} name="addressId" label="Địa chỉ" options={addressOptions} />
             <Text style={styles.addressHelper}>Mỗi đơn hàng chỉ chọn 1 địa chỉ nhận hàng.</Text>
             <AppButton
               title="Thêm địa chỉ mới"
@@ -473,49 +379,65 @@ export default function CreateOrderScreen() {
                   isRetrying={isInitialLoading}
                 />
               ) : null}
-              <SelectSheet
-                label="Tuyến vận chuyển"
-                value={routeId}
-                options={routeOptions}
-                onChange={(value) => {
-                  setRouteId(value);
-                  const route = routes.find((item) => String(item.routeId) === value);
-                  if (route) {
-                    setExchangeRate(String(route.exchangeRate ?? ''));
-                    setPriceShip(String(route.shippingFee ?? ''));
-                  }
-                }}
+              <Controller
+                control={form.control}
+                name="routeId"
+                render={({ field: { value, onChange }, fieldState: { error } }) => (
+                  <View>
+                    <SelectSheet
+                      label="Tuyến vận chuyển"
+                      value={value}
+                      options={routeOptions}
+                      onChange={(nextValue) => {
+                        onChange(nextValue);
+                        const route = routes.find((item) => String(item.routeId) === nextValue);
+                        if (route) {
+                          form.setValue('exchangeRate', String(route.exchangeRate ?? ''), { shouldValidate: true });
+                          form.setValue('priceShip', String(route.shippingFee ?? ''), { shouldValidate: true });
+                        }
+                      }}
+                      statusText={error?.message}
+                      statusTone={error ? 'error' : 'muted'}
+                    />
+                    {error ? <Text style={styles.fieldError}>{error.message}</Text> : null}
+                  </View>
+                )}
               />
-              <SelectSheet
+              <FormSelect
+                control={form.control}
+                name="serviceType"
                 label="Loại dịch vụ"
-                value={serviceType}
                 options={[
                   { label: 'Hàng sạch', value: 'CLEAN' },
                   { label: 'Hàng hỗn hợp', value: 'MIXED' },
                 ]}
-                onChange={setServiceType}
               />
               <View pointerEvents="none" style={[styles.row, styles.readOnlyRow]}>
                 <View style={styles.col}>
-                  <AppInput
+                  <FormInput
+                    control={form.control}
+                    name="exchangeRate"
                     label="Tỷ giá"
-                    value={exchangeRate}
                     editable={false}
                     selectTextOnFocus={false}
                     style={styles.readOnlyInput}
                   />
                 </View>
                 <View style={styles.col}>
-                  <AppInput
+                  <FormInput
+                    control={form.control}
+                    name="priceShip"
                     label="Cước/kg"
-                    value={priceShip}
                     editable={false}
                     selectTextOnFocus={false}
                     style={styles.readOnlyInput}
                   />
                 </View>
               </View>
-              <Pressable style={styles.checkRow} onPress={() => setCheckRequired((value) => !value)}>
+              <Pressable
+                style={styles.checkRow}
+                onPress={() => form.setValue('checkRequired', !checkRequired)}
+              >
                 <Feather name={checkRequired ? 'check-square' : 'square'} size={18} color={colors.primaryDark} />
                 <Text style={styles.checkText}>Yêu cầu kiểm hàng</Text>
               </Pressable>
@@ -529,118 +451,107 @@ export default function CreateOrderScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{isPurchaseOrder ? 'Danh sách sản phẩm' : 'Danh sách kiện hàng'}</Text>
-            {lines.map((line, index) => (
-              <View key={index} style={styles.lineCard}>
-                <Text style={styles.lineTitle}>{`Sản phẩm ${index + 1}`}</Text>
-                {isPurchaseOrder ? (
-                  <>
-                    <AppInput
-                      label="Link sản phẩm"
-                      value={line.productLink}
-                      onChangeText={(value) => setLine(index, { productLink: value })}
-                    />
-                    <AppInput
-                      label="Tên sản phẩm"
-                      value={line.productName}
-                      onChangeText={(value) => setLine(index, { productName: value })}
-                    />
-                    <AppInput label="Website" value={line.website} onChangeText={(value) => setLine(index, { website: value })} />
-                    <SelectSheet
-                      label="Loại sản phẩm"
-                      value={line.productTypeId}
-                      options={productTypeOptions}
-                      onChange={(value) => setLine(index, { productTypeId: value })}
-                    />
-                    <AppInput
-                      label="Giá web"
-                      value={line.priceWeb}
-                      onChangeText={(value) => setLine(index, { priceWeb: value })}
-                      keyboardType="numeric"
-                    />
-                    <AppInput
-                      label="Số lượng"
-                      value={line.quantity}
-                      onChangeText={(value) => setLine(index, { quantity: value })}
-                      keyboardType="numeric"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <AppInput
-                      label="Mã vận đơn"
-                      value={line.shipmentCode}
-                      onChangeText={(value) => setLine(index, { shipmentCode: value })}
-                    />
-                    <AppInput
-                      label="Tên sản phẩm"
-                      value={line.productName}
-                      onChangeText={(value) => setLine(index, { productName: value })}
-                    />
-                    <SelectSheet
-                      label="Loại sản phẩm"
-                      value={line.productTypeId}
-                      options={productTypeOptions}
-                      onChange={(value) => setLine(index, { productTypeId: value })}
-                    />
-                    <View style={styles.row}>
-                      <View style={styles.col}>
-                        <AppInput
-                          label="Số lượng"
-                          value={line.quantity}
-                          onChangeText={(value) => setLine(index, { quantity: value })}
-                          keyboardType="numeric"
-                        />
+            {fields.map((field, index) => {
+              const lineProductTypeId = form.watch(`lines.${index}.productTypeId`);
+              const lineImageUri = form.watch(`lines.${index}.imageUri`);
+              const lineImageId = form.watch(`lines.${index}.imageId`);
+              return (
+                <View key={field.id} style={styles.lineCard}>
+                  <Text style={styles.lineTitle}>{`Sản phẩm ${index + 1}`}</Text>
+                  {isPurchaseOrder ? (
+                    <>
+                      <FormInput control={form.control} name={`lines.${index}.productLink`} label="Link sản phẩm" />
+                      <FormInput control={form.control} name={`lines.${index}.productName`} label="Tên sản phẩm" />
+                      <FormInput control={form.control} name={`lines.${index}.website`} label="Website" />
+                      <FormSelect
+                        control={form.control}
+                        name={`lines.${index}.productTypeId`}
+                        label="Loại sản phẩm"
+                        options={productTypeOptions}
+                      />
+                      <FormInput
+                        control={form.control}
+                        name={`lines.${index}.priceWeb`}
+                        label="Giá web"
+                        keyboardType="numeric"
+                      />
+                      <FormInput
+                        control={form.control}
+                        name={`lines.${index}.quantity`}
+                        label="Số lượng"
+                        keyboardType="numeric"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <FormInput control={form.control} name={`lines.${index}.shipmentCode`} label="Mã vận đơn" />
+                      <FormInput control={form.control} name={`lines.${index}.productName`} label="Tên sản phẩm" />
+                      <FormSelect
+                        control={form.control}
+                        name={`lines.${index}.productTypeId`}
+                        label="Loại sản phẩm"
+                        options={productTypeOptions}
+                      />
+                      <View style={styles.row}>
+                        <View style={styles.col}>
+                          <FormInput
+                            control={form.control}
+                            name={`lines.${index}.quantity`}
+                            label="Số lượng"
+                            keyboardType="numeric"
+                          />
+                        </View>
+                        <View style={styles.col}>
+                          <AppInput
+                            label="Phụ phí"
+                            value={lineProductTypeId ? formatCurrency(getProductTypeExtraCharge(lineProductTypeId)) : ''}
+                            editable={false}
+                            selectTextOnFocus={false}
+                            style={styles.readOnlyInput}
+                          />
+                        </View>
                       </View>
-                      <View style={styles.col}>
-                        <AppInput
-                          label="Phụ phí"
-                          value={line.productTypeId ? formatCurrency(getProductTypeExtraCharge(line.productTypeId)) : ''}
-                          editable={false}
-                          selectTextOnFocus={false}
-                          style={styles.readOnlyInput}
+                      <FormInput control={form.control} name={`lines.${index}.note`} label="Ghi chú" />
+                      <View style={styles.lineActions}>
+                        <AppButton
+                          title={lineImageId ? 'Đổi ảnh' : 'Tải ảnh'}
+                          size="sm"
+                          variant="outline"
+                          onPress={() => void pickImage(index)}
                         />
+                        {fields.length > 1 ? (
+                          <AppButton
+                            title="Xóa"
+                            size="sm"
+                            variant="danger"
+                            onPress={() => remove(index)}
+                          />
+                        ) : null}
                       </View>
-                    </View>
-                    <AppInput label="Ghi chú" value={line.note} onChangeText={(value) => setLine(index, { note: value })} />
+                      <ImagePreview uri={lineImageUri} label="Đã chọn ảnh sản phẩm" />
+                    </>
+                  )}
+                  {isPurchaseOrder && fields.length > 1 ? (
                     <View style={styles.lineActions}>
                       <AppButton
-                        title={line.imageId ? 'Đổi ảnh' : 'Tải ảnh'}
+                        title="Xóa"
                         size="sm"
-                        variant="outline"
-                        onPress={() => pickImage(index)}
+                        variant="danger"
+                        onPress={() => remove(index)}
                       />
-                      {lines.length > 1 ? (
-                        <AppButton
-                          title="Xóa"
-                          size="sm"
-                          variant="danger"
-                          onPress={() => setLines((prev) => prev.filter((_, i) => i !== index))}
-                        />
-                      ) : null}
                     </View>
-                    <ImagePreview uri={line.imageUri} label="Đã chọn ảnh sản phẩm" />
-                  </>
-                )}
-                {isPurchaseOrder && lines.length > 1 ? (
-                  <View style={styles.lineActions}>
-                    <AppButton
-                      title="Xóa"
-                      size="sm"
-                      variant="danger"
-                      onPress={() => setLines((prev) => prev.filter((_, i) => i !== index))}
-                    />
-                  </View>
-                ) : null}
-              </View>
-            ))}
+                  ) : null}
+                </View>
+              );
+            })}
             <AppButton
-              title={'Th\u00eam s\u1ea3n ph\u1ea9m'}
+              title={'Thêm sản phẩm'}
               variant="outline"
-              onPress={() => setLines((prev) => [...prev, emptyLine()])}
+              onPress={() => append(emptyProductLine())}
             />
           </View>
 
-          <AppButton title="Tạo đơn hàng" onPress={Platform.OS === 'web' ? () => void submitOrderForWeb() : submitOrder} isLoading={submitting} style={styles.submitButton} />
+          <AppButton title="Tạo đơn hàng" onPress={onSubmit} isLoading={submitting} style={styles.submitButton} />
         </View>
       ) : (
         <View>
@@ -677,7 +588,7 @@ export default function CreateOrderScreen() {
             title="Tạo đơn"
             onPress={() => {
               setConfirmOpen(false);
-              void submitOrderForWeb(true);
+              void doSubmit(form.getValues());
             }}
             isLoading={submitting}
           />
@@ -686,27 +597,31 @@ export default function CreateOrderScreen() {
     </ModalShell>
     <ModalShell visible={isAddressEditorOpen} title="Thêm địa chỉ mới" onClose={resetAddressCreation}>
       <View style={styles.confirmContent}>
-        <AppInput
+        <FormInput
+          control={newAddressForm.control}
+          name="province"
           label="Tỉnh / Thành phố"
-          value={newAddressProvince}
-          onChangeText={setNewAddressProvince}
           placeholder="Nhập tỉnh hoặc thành phố"
         />
-        <AppInput
+        <FormInput
+          control={newAddressForm.control}
+          name="ward"
           label="Phường / Xã"
-          value={newAddressWard}
-          onChangeText={setNewAddressWard}
           placeholder="Nhập phường hoặc xã"
         />
-        <AppInput
+        <FormInput
+          control={newAddressForm.control}
+          name="street"
           label="Địa chỉ chi tiết"
-          value={newAddressStreet}
-          onChangeText={setNewAddressStreet}
           placeholder="Số nhà, tên đường..."
         />
         <View style={styles.confirmActions}>
           <AppButton title="Hủy" variant="outline" onPress={resetAddressCreation} />
-          <AppButton title="Xác nhận địa chỉ" onPress={reviewNewAddress} />
+          <AppButton
+            title="Xác nhận địa chỉ"
+            onPress={onReviewNewAddress}
+            disabled={!newAddressForm.formState.isValid}
+          />
         </View>
       </View>
     </ModalShell>
@@ -899,6 +814,12 @@ const styles = StyleSheet.create({
   routeHint: {
     color: colors.textSecondary,
     fontSize: typography.fontSize.xs,
+  },
+  fieldError: {
+    fontSize: typography.fontSize.xs,
+    color: colors.error,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.sm,
   },
   lineCard: {
     padding: spacing.md,
