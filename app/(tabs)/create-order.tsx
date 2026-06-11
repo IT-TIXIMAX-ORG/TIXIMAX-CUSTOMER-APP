@@ -193,6 +193,12 @@ export default function CreateOrderScreen() {
     }));
 
   const handleSelectType = (type: (typeof orderTypes)[number]) => {
+    // Temporarily keep consignment visible but disable entry until the feature is ready.
+    if (type.id === 'KY_GUI') {
+      Alert.alert('Thông báo', 'Chức năng sẽ sớm ra mắt');
+      return;
+    }
+
     resetForm();
     setSelectedType(type.id);
   };
