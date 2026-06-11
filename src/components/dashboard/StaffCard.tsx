@@ -94,9 +94,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   label: {
-    fontSize: 10,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
+    fontSize: typography.fontSize.xs,
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
     color: '#94A3B8',
     letterSpacing: typography.letterSpacing.widest,
     marginBottom: spacing.xs,

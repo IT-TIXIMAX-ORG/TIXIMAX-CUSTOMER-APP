@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
   dialogTitle: {
     flex: 1,
     fontSize: typography.fontSize.base,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
     color: colors.textPrimary,
     textTransform: 'uppercase',
   },

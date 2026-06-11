@@ -62,8 +62,8 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: typography.fontSize.xs,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
     color: colors.textSecondary,
     textTransform: 'uppercase',
     textAlign: 'center',

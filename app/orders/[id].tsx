@@ -1140,7 +1140,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   totalLabel: {
-    fontSize: 10,
+    fontSize: typography.fontSize.xs,
     fontWeight: '900',
     fontFamily: fontFamilyForWeight('900'),
     color: colors.textSecondary,
@@ -1148,7 +1148,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   payNowLabel: {
-    fontSize: 10,
+    fontSize: typography.fontSize.xs,
     fontWeight: '900',
     fontFamily: fontFamilyForWeight('900'),
     color: colors.warning,
@@ -1334,7 +1334,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
   },
   productBadgeText: {
-    fontSize: 10,
+    fontSize: typography.fontSize.xs,
     fontWeight: '900',
     fontFamily: fontFamilyForWeight('900'),
     color: colors.textSecondary,
@@ -1536,7 +1536,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   timelineDate: {
-    fontSize: 10,
+    fontSize: typography.fontSize.xs,
     color: colors.textMuted,
     marginTop: 2,
     marginBottom: spacing.xs,
@@ -1720,7 +1720,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primaryBorder,
   },
   staffRole: {
-    fontSize: 10,
+    fontSize: typography.fontSize.xs,
     fontWeight: '700',
     fontFamily: fontFamilyForWeight('700'),
     color: colors.textMuted,
@@ -1821,7 +1821,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   qrCenterHint: {
-    fontSize: 10,
+    fontSize: typography.fontSize.xs,
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.xs,
@@ -1902,7 +1902,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#BFDBFE',
   },
   breakdownLinkLabel: {
-    fontSize: 10,
+    fontSize: typography.fontSize.xs,
     fontWeight: '900',
     fontFamily: fontFamilyForWeight('900'),
     color: '#60A5FA',
@@ -1921,7 +1921,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderLight,
   },
   approxVndKey: {
-    fontSize: 11,
+    fontSize: typography.fontSize.xs,
     color: colors.textMuted,
     fontFamily: fontFamilyForWeight('400'),
   },

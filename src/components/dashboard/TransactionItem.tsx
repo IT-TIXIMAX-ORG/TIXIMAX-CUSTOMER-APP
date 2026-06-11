@@ -57,8 +57,8 @@ const styles = StyleSheet.create({
   purpose: {
     flex: 1,
     fontSize: typography.fontSize.sm,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
     color: colors.textPrimary,
     textTransform: 'uppercase',
   },
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   code: {
     fontSize: typography.fontSize.xs,
     color: colors.primaryDark,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
   },
 });

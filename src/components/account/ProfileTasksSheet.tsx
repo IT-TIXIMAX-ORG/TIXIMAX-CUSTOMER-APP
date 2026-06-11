@@ -140,8 +140,8 @@ const styles = StyleSheet.create({
   taskStatus: {
     color: colors.primaryDark,
     fontSize: typography.fontSize.xs,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
     textTransform: 'uppercase',
   },
   taskStatusDone: {
