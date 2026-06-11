@@ -44,6 +44,8 @@ export function SelectSheet({
       <Text style={styles.label}>{label}</Text>
       <Pressable
         style={styles.trigger}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${selected?.label || placeholder}`}
         onPress={() => {
           onOpen?.();
           setOpen(true);
@@ -60,7 +62,13 @@ export function SelectSheet({
           <View style={[styles.dialog, { maxHeight: dialogMaxHeight }]}>
             <View style={styles.dialogHeader}>
               <Text style={styles.dialogTitle}>{label}</Text>
-              <Pressable style={styles.close} onPress={() => setOpen(false)}>
+              <Pressable
+                style={styles.close}
+                onPress={() => setOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Đóng"
+                hitSlop={8}
+              >
                 <Feather name="x" size={18} color={colors.textSecondary} />
               </Pressable>
             </View>
@@ -82,6 +90,9 @@ export function SelectSheet({
                 return (
                   <Pressable
                     style={[styles.option, active && styles.activeOption]}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                    accessibilityState={{ selected: active }}
                     onPress={() => {
                       onChange(item.value);
                       setOpen(false);
@@ -159,8 +170,8 @@ const styles = StyleSheet.create({
   dialogTitle: {
     flex: 1,
     fontSize: typography.fontSize.base,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
     color: colors.textPrimary,
     textTransform: 'uppercase',
   },

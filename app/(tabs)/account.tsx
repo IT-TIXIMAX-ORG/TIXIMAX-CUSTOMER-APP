@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useQueryClient } from '@tanstack/react-query';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
 import { useAuthUser, useAuthActions } from '@/src/features/auth/hooks/use-auth-store';
@@ -33,9 +35,9 @@ import {
 import { changeCurrentPassword, createLocalPassword, getReferralSaleStaff } from '@/src/features/auth/services/auth.service';
 import type { ReferralStaffOption } from '@/src/features/customer-portal/shared/types/master-data.types';
 import { AppButton } from '@/src/components/ui/AppButton';
-import { AppInput } from '@/src/components/ui/AppInput';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
+import { FormInput } from '@/src/components/form/FormInput';
 import { MenuItem } from '@/src/components/account/MenuItem';
 import { MenuSection } from '@/src/components/account/MenuSection';
 import { ProfileHeader } from '@/src/components/account/ProfileHeader';
@@ -44,6 +46,18 @@ import { ProfileUpdateWidget } from '@/src/components/account/ProfileUpdateWidge
 import { WalletCard } from '@/src/components/account/WalletCard';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
+import {
+  profileSchema,
+  type ProfileForm,
+  addressSchema,
+  type AddressForm,
+  verifyEmailOtpSchema,
+  type VerifyEmailOtpForm,
+  changePasswordSchema,
+  type ChangePasswordForm,
+  createPasswordSchema,
+  type CreatePasswordForm,
+} from '@/src/features/customer-portal/shared/schemas/account.schemas';
 
 type AccountModal = 'progress' | 'profile' | 'address' | 'security' | 'verify' | 'support' | null;
 
@@ -59,22 +73,10 @@ export default function AccountScreen() {
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [staffId, setStaffId] = useState('');
   const [staffOptions, setStaffOptions] = useState<ReferralStaffOption[]>([]);
   const [addressId, setAddressId] = useState('');
-  const [province, setProvince] = useState('');
-  const [ward, setWard] = useState('');
-  const [street, setStreet] = useState('');
   const [isAddressEditorVisible, setIsAddressEditorVisible] = useState(false);
   const [pendingDeleteAddressId, setPendingDeleteAddressId] = useState('');
-  const [otp, setOtp] = useState('');
-  const [password, setPassword] = useState('');
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isOldPasswordVisible, setIsOldPasswordVisible] = useState(false);
   const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
@@ -83,6 +85,47 @@ export default function AccountScreen() {
   const displayName = profile?.name || user?.name || 'Khách hàng';
   const displayEmail = profile?.email || user?.email || '';
   const hasAssignedStaff = Boolean(profile?.dedicatedStaff);
+
+  // ===== Forms (react-hook-form + Zod) =====
+  const profileForm = useForm<ProfileForm>({
+    resolver: zodResolver(profileSchema),
+    mode: 'onChange',
+    defaultValues: { name: '', email: '', phone: '', staffId: '' },
+  });
+  const addressForm = useForm<AddressForm>({
+    resolver: zodResolver(addressSchema),
+    mode: 'onChange',
+    defaultValues: { province: '', ward: '', street: '' },
+  });
+  const verifyForm = useForm<VerifyEmailOtpForm>({
+    resolver: zodResolver(verifyEmailOtpSchema),
+    mode: 'onChange',
+    defaultValues: { otp: '' },
+  });
+  const changePasswordForm = useForm<ChangePasswordForm>({
+    resolver: zodResolver(changePasswordSchema),
+    mode: 'onChange',
+    defaultValues: { oldPassword: '', newPassword: '', confirmNewPassword: '' },
+  });
+  const createPasswordForm = useForm<CreatePasswordForm>({
+    resolver: zodResolver(createPasswordSchema),
+    mode: 'onChange',
+    defaultValues: { password: '', confirmNewPassword: '' },
+  });
+
+  const resetAddressForm = () => {
+    setAddressId('');
+    addressForm.reset({ province: '', ward: '', street: '' });
+  };
+
+  const resetPasswordForms = () => {
+    changePasswordForm.reset({ oldPassword: '', newPassword: '', confirmNewPassword: '' });
+    createPasswordForm.reset({ password: '', confirmNewPassword: '' });
+    setIsPasswordVisible(false);
+    setIsOldPasswordVisible(false);
+    setIsNewPasswordVisible(false);
+    setIsConfirmPasswordVisible(false);
+  };
 
   const refreshAccount = async () => {
     if (Platform.OS === 'web' || isRefreshing) return;
@@ -101,13 +144,17 @@ export default function AccountScreen() {
     }
   };
 
+  // Nạp dữ liệu hồ sơ vào form khi mở modal "Thông tin cá nhân".
   useEffect(() => {
-    if (!profile || modal === 'profile') return;
-    setName(profile.name || '');
-    setEmail(profile.email || '');
-    setPhone(profile.phone || '');
-    setStaffId(profile.dedicatedStaff?.accountId || profile.dedicatedStaff?.staffId || '');
-  }, [modal, profile]);
+    if (modal !== 'profile' || !profile) return;
+    profileForm.reset({
+      name: profile.name || '',
+      email: profile.email || '',
+      phone: profile.phone || '',
+      staffId: profile.dedicatedStaff?.accountId || profile.dedicatedStaff?.staffId || '',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modal]);
 
   useEffect(() => {
     if (modal !== 'profile' || hasAssignedStaff) return;
@@ -121,8 +168,8 @@ export default function AccountScreen() {
     setPendingDeleteAddressId('');
     setIsAddressEditorVisible(false);
     resetAddressForm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modal]);
-
 
   const handleLogoutNow = async () => {
     if (isLoggingOut) return;
@@ -168,23 +215,16 @@ export default function AccountScreen() {
     }
   };
 
-  const saveProfile = async () => {
+  const onSaveProfile = profileForm.handleSubmit(async (values) => {
     await runAction(async () => {
       await updateCustomerProfile({
-        fullName: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        ...(staffId && !hasAssignedStaff ? { staffId } : {}),
+        fullName: values.name,
+        email: values.email,
+        phone: values.phone,
+        ...(values.staffId && !hasAssignedStaff ? { staffId: values.staffId } : {}),
       });
     }, 'Đã cập nhật thông tin');
-  };
-
-  const resetAddressForm = () => {
-    setAddressId('');
-    setProvince('');
-    setWard('');
-    setStreet('');
-  };
+  });
 
   const openAddressList = () => {
     setPendingDeleteAddressId('');
@@ -204,34 +244,30 @@ export default function AccountScreen() {
   };
 
   const openAddressEditor = (id?: string) => {
-    if (!id) {
-      setPendingDeleteAddressId('');
-      resetAddressForm();
-      setIsAddressEditorVisible(true);
-      return;
-    }
-
-    const address = profile?.addresses.find((item) => String(item.addressId) === id);
-    if (!address) {
-      setPendingDeleteAddressId('');
-      resetAddressForm();
-      setIsAddressEditorVisible(true);
-      return;
-    }
-
     setPendingDeleteAddressId('');
+
+    const address = id ? profile?.addresses.find((item) => String(item.addressId) === id) : undefined;
+    if (!address) {
+      setAddressId('');
+      addressForm.reset({ province: '', ward: '', street: '' });
+      setIsAddressEditorVisible(true);
+      return;
+    }
+
     setAddressId(String(address.addressId));
-    setProvince(address.province || '');
-    setWard(address.ward || '');
-    setStreet(address.streetAddress || '');
+    addressForm.reset({
+      province: address.province || '',
+      ward: address.ward || '',
+      street: address.streetAddress || '',
+    });
     setIsAddressEditorVisible(true);
   };
 
-  const saveAddress = async () => {
+  const onSaveAddress = addressForm.handleSubmit(async (values) => {
     const payload = {
-      province: province.trim(),
-      ward: ward.trim(),
-      street: street.trim(),
+      province: values.province,
+      ward: values.ward,
+      street: values.street,
     };
 
     try {
@@ -249,7 +285,7 @@ export default function AccountScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  });
 
   const promptRemoveAddress = (id: string) => {
     if (addressId === id) closeAddressEditor();
@@ -278,80 +314,38 @@ export default function AccountScreen() {
     }
   };
 
-  // TODO(phone-otp): tạm tắt xác minh SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375).
-  // const requestPhoneVerify = async () => {
-  //   if (!phone.trim()) {
-  //     Toast.show({ type: 'error', text1: 'Vui lòng nhập số điện thoại' });
-  //     return;
-  //   }
-  //   await runAction(async () => requestPhoneOtp(phone.trim()), 'Đã gửi mã OTP điện thoại');
-  //   setModal('verify');
-  // };
+  const verifyEmailAddress = () => profile?.email || profileForm.getValues('email');
 
-  // const verifyPhone = async () => {
-  //   await runVerifyAction(async () => verifyPhoneOtp(otp.trim()), 'Đã xác minh điện thoại');
-  // };
-
-  const verifyEmail = async () => {
-    await runVerifyAction(async () => verifyOtp(profile?.email || email, otp.trim()), 'Đã xác minh email');
-  };
+  const onVerifyEmail = verifyForm.handleSubmit(async (values) => {
+    await runVerifyAction(async () => verifyOtp(verifyEmailAddress(), values.otp), 'Đã xác minh email');
+  });
 
   const resendEmailOtp = async () => {
-    await runAction(async () => resendOtp(profile?.email || email), 'Đã gửi lại OTP email');
+    await runAction(async () => resendOtp(verifyEmailAddress()), 'Đã gửi lại OTP email');
     setModal('verify');
   };
 
-  const resetPasswordForm = () => {
-    setPassword('');
-    setOldPassword('');
-    setNewPassword('');
-    setConfirmNewPassword('');
-    setIsPasswordVisible(false);
-    setIsOldPasswordVisible(false);
-    setIsNewPasswordVisible(false);
-    setIsConfirmPasswordVisible(false);
-  };
-
   const closeSecurityModal = () => {
-    resetPasswordForm();
+    resetPasswordForms();
     setModal(null);
   };
 
-  const savePassword = async () => {
-    if (profile?.hasPassword) {
-      if (!oldPassword.trim() || !newPassword.trim() || !confirmNewPassword.trim()) {
-        Toast.show({ type: 'error', text1: 'Vui lòng nhập đầy đủ mật khẩu' });
-        return;
-      }
+  const onChangePassword = changePasswordForm.handleSubmit(async (values) => {
+    await runAction(
+      async () => changeCurrentPassword({
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword,
+        confirmNewPassword: values.confirmNewPassword,
+      }),
+      'Đã đổi mật khẩu',
+    );
+    resetPasswordForms();
+  });
 
-      if (newPassword !== confirmNewPassword) {
-        Toast.show({ type: 'error', text1: 'Xác nhận mật khẩu mới không khớp' });
-        return;
-      }
-
-      await runAction(
-        async () => changeCurrentPassword({
-          oldPassword,
-          newPassword,
-          confirmNewPassword,
-        }),
-        'Đã đổi mật khẩu',
-      );
-    } else {
-      if (!password.trim() || !confirmNewPassword.trim()) {
-        Toast.show({ type: 'error', text1: 'Vui lòng nhập đầy đủ mật khẩu' });
-        return;
-      }
-
-      if (password !== confirmNewPassword) {
-        Toast.show({ type: 'error', text1: 'Xác nhận mật khẩu không khớp' });
-        return;
-      }
-
-      await runAction(async () => createLocalPassword(password), 'Đã tạo mật khẩu');
-    }
-    resetPasswordForm();
-  };
+  const onCreatePassword = createPasswordForm.handleSubmit(async (values) => {
+    await runAction(async () => createLocalPassword(values.password), 'Đã tạo mật khẩu');
+    resetPasswordForms();
+  });
 
   const staffSelectOptions = staffOptions.map((staff) => ({
     value: staff.accountId,
@@ -458,15 +452,38 @@ export default function AccountScreen() {
       />
 
       <ModalShell visible={modal === 'profile'} title="Thông tin cá nhân" onClose={() => setModal(null)}>
-        <AppInput label="Họ tên" value={name} onChangeText={setName} />
-        <AppInput label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
-        <AppInput label="Số điện thoại" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+        <FormInput control={profileForm.control} name="name" label="Họ tên" />
+        <FormInput
+          control={profileForm.control}
+          name="email"
+          label="Email"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <FormInput
+          control={profileForm.control}
+          name="phone"
+          label="Số điện thoại"
+          keyboardType="phone-pad"
+        />
         {!hasAssignedStaff ? (
-          <SelectSheet label="Nhân viên giới thiệu" value={staffId} options={staffSelectOptions} onChange={setStaffId} />
+          <Controller
+            control={profileForm.control}
+            name="staffId"
+            render={({ field: { value, onChange } }) => (
+              <SelectSheet label="Nhân viên giới thiệu" value={value} options={staffSelectOptions} onChange={onChange} />
+            )}
+          />
         ) : (
           <Text style={styles.helperText}>Nhân viên phụ trách: {profile?.dedicatedStaff?.name}</Text>
         )}
-        <AppButton title="Lưu thông tin" onPress={saveProfile} isLoading={loading} />
+        <AppButton
+          title="Lưu thông tin"
+          onPress={onSaveProfile}
+          isLoading={loading}
+          disabled={!profileForm.formState.isValid}
+        />
       </ModalShell>
 
       <ModalShell visible={modal === 'address'} title="Địa chỉ" onClose={() => setModal(null)}>
@@ -483,10 +500,22 @@ export default function AccountScreen() {
                 <Text style={styles.addressName}>{address.addressName || 'Địa chỉ nhận hàng'}</Text>
                 <Text style={styles.addressLine}>{[address.streetAddress, address.ward, address.province].filter(Boolean).join(', ')}</Text>
               </View>
-              <Pressable onPress={() => openAddressEditor(String(address.addressId))} style={styles.iconButton} hitSlop={8}>
+              <Pressable
+                onPress={() => openAddressEditor(String(address.addressId))}
+                style={styles.iconButton}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Sửa địa chỉ"
+              >
                 <Feather name="edit-2" size={16} color={colors.primaryDark} />
               </Pressable>
-              <Pressable onPress={() => promptRemoveAddress(String(address.addressId))} style={styles.iconButton} hitSlop={8}>
+              <Pressable
+                onPress={() => promptRemoveAddress(String(address.addressId))}
+                style={styles.iconButton}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Xóa địa chỉ"
+              >
                 <Feather name="trash-2" size={16} color={colors.error} />
               </Pressable>
             </View>
@@ -506,23 +535,34 @@ export default function AccountScreen() {
         title={addressId ? 'Chỉnh sửa địa chỉ' : 'Tạo địa chỉ'}
         onClose={closeAddressEditor}
       >
-        <AppInput label="Tỉnh/Thành phố" value={province} onChangeText={setProvince} />
-        <AppInput label="Phường/Xã" value={ward} onChangeText={setWard} />
-        <AppInput label="Số nhà, đường" value={street} onChangeText={setStreet} />
+        <FormInput control={addressForm.control} name="province" label="Tỉnh/Thành phố" />
+        <FormInput control={addressForm.control} name="ward" label="Phường/Xã" />
+        <FormInput control={addressForm.control} name="street" label="Số nhà, đường" />
         <View style={styles.rowActions}>
           <AppButton title="Đóng" variant="outline" onPress={closeAddressEditor} style={{ flex: 1 }} />
-          <AppButton title={addressId ? 'Lưu địa chỉ' : 'Tạo địa chỉ'} onPress={saveAddress} isLoading={loading} style={{ flex: 1 }} />
+          <AppButton
+            title={addressId ? 'Lưu địa chỉ' : 'Tạo địa chỉ'}
+            onPress={onSaveAddress}
+            isLoading={loading}
+            disabled={!addressForm.formState.isValid}
+            style={{ flex: 1 }}
+          />
         </View>
       </ModalShell>
 
       <ModalShell visible={modal === 'verify'} title="Xác minh tài khoản" onClose={() => setModal(null)}>
-        <Text style={styles.helperText}>Email: {profile?.email || email}</Text>
+        <Text style={styles.helperText}>Email: {verifyEmailAddress()}</Text>
         {/* TODO(phone-otp): tạm ẩn dòng SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375). */}
         {/* <Text style={styles.helperText}>Điện thoại: {profile?.phone || phone}</Text> */}
-        <AppInput label="Mã OTP" value={otp} onChangeText={setOtp} keyboardType="number-pad" />
+        <FormInput control={verifyForm.control} name="otp" label="Mã OTP" keyboardType="number-pad" />
         <View style={styles.verifyActions}>
           <AppButton title="Gửi OTP email" variant="outline" onPress={resendEmailOtp} isLoading={loading} />
-          <AppButton title="Xác minh email" onPress={verifyEmail} isLoading={loading} />
+          <AppButton
+            title="Xác minh email"
+            onPress={onVerifyEmail}
+            isLoading={loading}
+            disabled={!verifyForm.formState.isValid}
+          />
           {/* TODO(phone-otp): tạm tắt xác minh SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375). */}
           {/* <AppButton title="Gửi OTP điện thoại" variant="outline" onPress={requestPhoneVerify} isLoading={loading} /> */}
           {/* <AppButton title="Xác minh điện thoại" onPress={verifyPhone} isLoading={loading} /> */}
@@ -532,47 +572,92 @@ export default function AccountScreen() {
       <ModalShell visible={modal === 'security'} title="Bảo mật và mật khẩu" onClose={closeSecurityModal}>
         {profile?.hasPassword ? (
           <>
-            <PasswordInput
-              label="Mật khẩu cũ"
-              value={oldPassword}
-              onChangeText={setOldPassword}
-              isVisible={isOldPasswordVisible}
-              onToggleVisibility={() => setIsOldPasswordVisible((visible) => !visible)}
+            <Controller
+              control={changePasswordForm.control}
+              name="oldPassword"
+              render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+                <PasswordInput
+                  label="Mật khẩu cũ"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={error?.message}
+                  isVisible={isOldPasswordVisible}
+                  onToggleVisibility={() => setIsOldPasswordVisible((visible) => !visible)}
+                />
+              )}
             />
-            <PasswordInput
-              label="Mật khẩu mới"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              isVisible={isNewPasswordVisible}
-              onToggleVisibility={() => setIsNewPasswordVisible((visible) => !visible)}
+            <Controller
+              control={changePasswordForm.control}
+              name="newPassword"
+              render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+                <PasswordInput
+                  label="Mật khẩu mới"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={error?.message}
+                  isVisible={isNewPasswordVisible}
+                  onToggleVisibility={() => setIsNewPasswordVisible((visible) => !visible)}
+                />
+              )}
             />
-            <PasswordInput
-              label="Xác nhận mật khẩu mới"
-              value={confirmNewPassword}
-              onChangeText={setConfirmNewPassword}
-              isVisible={isConfirmPasswordVisible}
-              onToggleVisibility={() => setIsConfirmPasswordVisible((visible) => !visible)}
+            <Controller
+              control={changePasswordForm.control}
+              name="confirmNewPassword"
+              render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+                <PasswordInput
+                  label="Xác nhận mật khẩu mới"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={error?.message}
+                  isVisible={isConfirmPasswordVisible}
+                  onToggleVisibility={() => setIsConfirmPasswordVisible((visible) => !visible)}
+                />
+              )}
             />
           </>
         ) : (
           <>
-            <PasswordInput
-              label="Tạo mật khẩu"
-              value={password}
-              onChangeText={setPassword}
-              isVisible={isPasswordVisible}
-              onToggleVisibility={() => setIsPasswordVisible((visible) => !visible)}
+            <Controller
+              control={createPasswordForm.control}
+              name="password"
+              render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+                <PasswordInput
+                  label="Tạo mật khẩu"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={error?.message}
+                  isVisible={isPasswordVisible}
+                  onToggleVisibility={() => setIsPasswordVisible((visible) => !visible)}
+                />
+              )}
             />
-            <PasswordInput
-              label="Xác nhận mật khẩu"
-              value={confirmNewPassword}
-              onChangeText={setConfirmNewPassword}
-              isVisible={isConfirmPasswordVisible}
-              onToggleVisibility={() => setIsConfirmPasswordVisible((visible) => !visible)}
+            <Controller
+              control={createPasswordForm.control}
+              name="confirmNewPassword"
+              render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+                <PasswordInput
+                  label="Xác nhận mật khẩu"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={error?.message}
+                  isVisible={isConfirmPasswordVisible}
+                  onToggleVisibility={() => setIsConfirmPasswordVisible((visible) => !visible)}
+                />
+              )}
             />
           </>
         )}
-        <AppButton title={profile?.hasPassword ? 'Đổi mật khẩu' : 'Tạo mật khẩu'} onPress={savePassword} isLoading={loading} />
+        <AppButton
+          title={profile?.hasPassword ? 'Đổi mật khẩu' : 'Tạo mật khẩu'}
+          onPress={profile?.hasPassword ? onChangePassword : onCreatePassword}
+          isLoading={loading}
+          disabled={profile?.hasPassword ? !changePasswordForm.formState.isValid : !createPasswordForm.formState.isValid}
+        />
       </ModalShell>
 
       <ModalShell visible={modal === 'support'} title="Nhân viên hỗ trợ" onClose={() => setModal(null)}>
@@ -608,22 +693,27 @@ function PasswordInput({
   label,
   value,
   onChangeText,
+  onBlur,
+  error,
   isVisible,
   onToggleVisibility,
 }: {
   label: string;
   value: string;
   onChangeText: (value: string) => void;
+  onBlur?: () => void;
+  error?: string;
   isVisible: boolean;
   onToggleVisibility: () => void;
 }) {
   return (
     <View style={styles.passwordField}>
       <Text style={styles.passwordLabel}>{label}</Text>
-      <View style={styles.passwordInputBox}>
+      <View style={[styles.passwordInputBox, error && styles.passwordInputBoxError]}>
         <TextInput
           value={value}
           onChangeText={onChangeText}
+          onBlur={onBlur}
           secureTextEntry={!isVisible}
           autoCapitalize="none"
           autoCorrect={false}
@@ -640,6 +730,7 @@ function PasswordInput({
           <Feather name={isVisible ? 'eye-off' : 'eye'} size={18} color={colors.textSecondary} />
         </Pressable>
       </View>
+      {error ? <Text style={styles.fieldError}>{error}</Text> : null}
     </View>
   );
 }
@@ -685,6 +776,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderLight,
     borderRadius: borderRadius.md,
+  },
+  passwordInputBoxError: {
+    borderColor: colors.error,
+  },
+  fieldError: {
+    fontSize: typography.fontSize.xs,
+    color: colors.error,
+    marginTop: spacing.xs,
   },
   passwordInput: {
     flex: 1,

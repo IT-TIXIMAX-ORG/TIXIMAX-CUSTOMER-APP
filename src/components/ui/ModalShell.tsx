@@ -55,7 +55,13 @@ export function ModalShell({
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
-            <Pressable style={styles.close} onPress={onClose}>
+            <Pressable
+              style={styles.close}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Đóng"
+              hitSlop={8}
+            >
               <Feather name="x" size={18} color={colors.textSecondary} />
             </Pressable>
           </View>
@@ -112,8 +118,8 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     fontSize: typography.fontSize.base,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
     color: colors.textPrimary,
     textTransform: 'uppercase',
   },

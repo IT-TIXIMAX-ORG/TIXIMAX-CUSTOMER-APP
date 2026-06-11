@@ -25,8 +25,8 @@ const styles = StyleSheet.create({
   },
   header: {
     fontSize: typography.fontSize.xs,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: typography.letterSpacing.wide,

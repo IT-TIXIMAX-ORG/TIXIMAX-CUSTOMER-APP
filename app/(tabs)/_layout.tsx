@@ -39,7 +39,7 @@ export default function TabLayout() {
           shadowOpacity: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: '800',
           fontFamily: fontFamilyForWeight('800'),
           textTransform: 'uppercase',

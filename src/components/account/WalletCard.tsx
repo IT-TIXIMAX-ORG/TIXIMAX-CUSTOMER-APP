@@ -27,6 +27,8 @@ export function WalletCard({ balance, onDeposit }: Props) {
           onPress={onDeposit}
           accessibilityRole="button"
           accessibilityLabel="Nạp tiền vào ví"
+          // Nút cao 32px — hitSlop bù để vùng chạm đạt tối thiểu 44px.
+          hitSlop={8}
         >
           <Text style={styles.depositText}>Nạp tiền</Text>
         </Pressable>
@@ -62,9 +64,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   walletLabel: {
-    fontSize: 10,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
+    fontSize: typography.fontSize.xs,
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
     color: colors.textSecondary,
     marginBottom: 2,
     textTransform: 'uppercase',

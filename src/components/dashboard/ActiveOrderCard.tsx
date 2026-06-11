@@ -6,6 +6,7 @@ import { StatusBadge } from '../ui/StatusBadge';
 import type { CustomerActiveOrder } from '@/src/features/customer-portal/shared/types/customer-portal.types';
 import { formatCurrency, formatDate } from '@/src/shared/lib/utils';
 import { orderTypeLabel } from '@/src/shared/lib/labels';
+import { isPendingPaymentStatus } from '@/src/features/customer-portal/shared/lib/payment-status';
 
 interface ActiveOrderCardProps {
   order: CustomerActiveOrder;
@@ -19,21 +20,36 @@ const getTrackingCode = (order: CustomerActiveOrder) => {
   return linkWithTracking?.trackingCode || linkWithTracking?.shipmentCode || '';
 };
 
+// Status hiển thị ưu tiên status cấp đơn (orderStatus); chỉ dùng tracking summary làm
+// fallback khi API không trả orderStatus — để badge & chấm đỏ phản ánh đúng trạng thái đơn.
 const getDisplayStatus = (order: CustomerActiveOrder) =>
+  order.orderStatus ||
   order.trackingSummary?.displayStatus ||
-  order.trackingSummary?.orderMainStatus ||
-  order.orderStatus;
+  order.trackingSummary?.orderMainStatus;
 
 export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
   const router = useRouter();
   const trackingCode = getTrackingCode(order);
   const amount = order.finalPriceOrder ?? order.paymentAfterAuction ?? 0;
+  const hasUnpaidPayment = isPendingPaymentStatus(getDisplayStatus(order));
 
   return (
-    <Pressable style={styles.container} onPress={() => router.push(`/orders/${order.orderId}`)}>
+    <Pressable
+      style={styles.container}
+      accessibilityRole="button"
+      accessibilityLabel={
+        hasUnpaidPayment
+          ? `Xem chi tiết đơn ${order.orderCode}, có thanh toán chưa hoàn tất`
+          : `Xem chi tiết đơn ${order.orderCode}`
+      }
+      onPress={() => router.push(`/orders/${order.orderId}`)}
+    >
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.orderCode}>{order.orderCode}</Text>
+          <View style={styles.orderCodeRow}>
+            <Text style={styles.orderCode} numberOfLines={1}>{order.orderCode}</Text>
+            {hasUnpaidPayment ? <View style={styles.unpaidDot} /> : null}
+          </View>
           <Text style={styles.date}>{formatDate(getDisplayDate(order))}</Text>
         </View>
         <StatusBadge status={getDisplayStatus(order)} />
@@ -85,12 +101,24 @@ const styles = StyleSheet.create({
   headerText: {
     flex: 1,
   },
+  orderCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
   orderCode: {
+    flexShrink: 1,
     fontSize: typography.fontSize.md,
     fontWeight: '900',
     fontFamily: fontFamilyForWeight('900'),
     color: colors.textPrimary,
-    marginBottom: spacing.xs,
+  },
+  unpaidDot: {
+    width: 8,
+    height: 8,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.error,
   },
   date: {
     fontSize: typography.fontSize.xs,

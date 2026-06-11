@@ -51,7 +51,8 @@ export const typography = {
     black: 'Geist_900Black',
   },
   fontSize: {
-    xs: 10,
+    // 10px quá nhỏ cho mobile (review P0.4) — nâng sàn lên 11px.
+    xs: 11,
     sm: 12,
     base: 14,
     md: 16,
