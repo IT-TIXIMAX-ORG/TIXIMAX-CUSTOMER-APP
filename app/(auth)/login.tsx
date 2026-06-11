@@ -12,6 +12,8 @@ import {
 import Toast from 'react-native-toast-message';
 import * as WebBrowser from 'expo-web-browser';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 import { useAuthStore } from '@/src/features/auth/stores/auth.store';
 import {
@@ -25,12 +27,26 @@ import {
   verifyOtp,
 } from '@/src/features/customer-portal/shared/services/customer-portal.service';
 import { AppButton } from '@/src/components/ui/AppButton';
-import { AppInput } from '@/src/components/ui/AppInput';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
+import { FormInput } from '@/src/components/form/FormInput';
 import { colors, spacing, borderRadius, typography, fontFamilyForWeight } from '@/src/theme/tokens';
 import type { ReferralStaffOption } from '@/src/features/customer-portal/shared/types/master-data.types';
 import { ENV_CONFIG } from '@/src/shared/constants/env.constants';
+import {
+  loginSchema,
+  type LoginForm,
+  registerSchema,
+  type RegisterForm,
+  otpVerifySchema,
+  type OtpVerifyForm,
+  forgotEmailSchema,
+  type ForgotEmailForm,
+  forgotOtpSchema,
+  type ForgotOtpForm,
+  forgotResetSchema,
+  type ForgotResetForm,
+} from '@/src/features/auth/schemas/auth.schemas';
 
 const ACCOUNT_NOT_VERIFIED_CODE = 1009;
 const GOOGLE_REDIRECT_URL = 'tiximaxcustomerapp://auth/google-callback';
@@ -53,43 +69,72 @@ const readUrlParam = (url: string, key: string) => {
 };
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
+  // Hiển thị modal
   const [isRegisterVisible, setIsRegisterVisible] = useState(false);
   const [isVerifyVisible, setIsVerifyVisible] = useState(false);
   const [isForgotPasswordEmailVisible, setIsForgotPasswordEmailVisible] = useState(false);
   const [isForgotPasswordOtpVisible, setIsForgotPasswordOtpVisible] = useState(false);
   const [isForgotPasswordResetVisible, setIsForgotPasswordResetVisible] = useState(false);
 
-  const [registerName, setRegisterName] = useState('');
-  const [registerEmail, setRegisterEmail] = useState('');
-  const [registerPhone, setRegisterPhone] = useState('');
-  const [registerPassword, setRegisterPassword] = useState('');
-  const [registerPasswordConfirm, setRegisterPasswordConfirm] = useState('');
-  const [registerStaffId, setRegisterStaffId] = useState('');
+  // Carry-over giữa 3 bước quên mật khẩu (email + otp từ bước trước)
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+
+  // Nhân viên giới thiệu — trạng thái async, không phải lỗi validation
   const [registerStaffOptions, setRegisterStaffOptions] = useState<ReferralStaffOption[]>([]);
+  const [isRegisterStaffLoading, setIsRegisterStaffLoading] = useState(false);
+  const [registerStaffError, setRegisterStaffError] = useState('');
 
-  const [verifyEmailValue, setVerifyEmailValue] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
-  const [forgotPasswordOtp, setForgotPasswordOtp] = useState('');
-  const [forgotPasswordNewPassword, setForgotPasswordNewPassword] = useState('');
-  const [forgotPasswordConfirmPassword, setForgotPasswordConfirmPassword] = useState('');
-
+  // Loading cho các submit gọi API trực tiếp
   const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const [isVerifyLoading, setIsVerifyLoading] = useState(false);
   const [isRequestOtpLoading, setIsRequestOtpLoading] = useState(false);
   const [isForgotPasswordSendOtpLoading, setIsForgotPasswordSendOtpLoading] = useState(false);
   const [isForgotPasswordResetLoading, setIsForgotPasswordResetLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isRegisterStaffLoading, setIsRegisterStaffLoading] = useState(false);
-  const [registerStaffError, setRegisterStaffError] = useState('');
 
   const login = useAuthStore((s) => s.login);
   const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
   const isLoading = useAuthStore((s) => s.isLoading);
+
+  // ===== Forms (react-hook-form + Zod) =====
+  const loginForm = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    mode: 'onChange',
+    defaultValues: { email: '', password: '' },
+  });
+  const registerForm = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+    mode: 'onChange',
+    defaultValues: {
+      fullName: '',
+      email: '',
+      phone: '',
+      password: '',
+      passwordConfirm: '',
+      staffId: '',
+    },
+  });
+  const verifyForm = useForm<OtpVerifyForm>({
+    resolver: zodResolver(otpVerifySchema),
+    mode: 'onChange',
+    defaultValues: { email: '', otp: '' },
+  });
+  const forgotEmailForm = useForm<ForgotEmailForm>({
+    resolver: zodResolver(forgotEmailSchema),
+    mode: 'onChange',
+    defaultValues: { email: '' },
+  });
+  const forgotOtpForm = useForm<ForgotOtpForm>({
+    resolver: zodResolver(forgotOtpSchema),
+    mode: 'onChange',
+    defaultValues: { otp: '' },
+  });
+  const forgotResetForm = useForm<ForgotResetForm>({
+    resolver: zodResolver(forgotResetSchema),
+    mode: 'onChange',
+    defaultValues: { newPassword: '', confirmPassword: '' },
+  });
 
   const loadRegisterStaff = useCallback(async () => {
     try {
@@ -115,45 +160,35 @@ export default function LoginScreen() {
     void loadRegisterStaff();
   }, [isRegisterVisible, loadRegisterStaff]);
 
-  const resetRegisterForm = () => {
-    setRegisterName('');
-    setRegisterEmail('');
-    setRegisterPhone('');
-    setRegisterPassword('');
-    setRegisterPasswordConfirm('');
-    setRegisterStaffId('');
+  const closeRegisterModal = () => {
+    setIsRegisterVisible(false);
+    registerForm.reset();
     setRegisterStaffError('');
   };
 
-  const resetForgotPasswordForm = () => {
-    setForgotPasswordEmail('');
-    setForgotPasswordOtp('');
-    setForgotPasswordNewPassword('');
-    setForgotPasswordConfirmPassword('');
-  };
-
-  const closeRegisterModal = () => {
-    setIsRegisterVisible(false);
-    resetRegisterForm();
-  };
-
   const openVerifyModal = (nextEmail?: string) => {
-    const resolvedEmail = normalizeEmail(nextEmail || email || registerEmail || verifyEmailValue);
-    setVerifyEmailValue(resolvedEmail);
-    setOtpCode('');
+    const resolvedEmail = normalizeEmail(
+      nextEmail ||
+        loginForm.getValues('email') ||
+        registerForm.getValues('email') ||
+        verifyForm.getValues('email'),
+    );
+    verifyForm.reset({ email: resolvedEmail, otp: '' });
     setIsVerifyVisible(true);
   };
 
   const closeVerifyModal = () => {
     setIsVerifyVisible(false);
-    setOtpCode('');
+    verifyForm.setValue('otp', '');
   };
 
   const openForgotPasswordEmailModal = () => {
-    setForgotPasswordEmail(normalizeEmail(email || forgotPasswordEmail));
-    setForgotPasswordOtp('');
-    setForgotPasswordNewPassword('');
-    setForgotPasswordConfirmPassword('');
+    const prefill = normalizeEmail(loginForm.getValues('email') || forgotEmail);
+    forgotEmailForm.reset({ email: prefill });
+    forgotOtpForm.reset({ otp: '' });
+    forgotResetForm.reset({ newPassword: '', confirmPassword: '' });
+    setForgotEmail(prefill);
+    setForgotOtp('');
     setIsForgotPasswordEmailVisible(true);
   };
 
@@ -161,7 +196,11 @@ export default function LoginScreen() {
     setIsForgotPasswordEmailVisible(false);
     setIsForgotPasswordOtpVisible(false);
     setIsForgotPasswordResetVisible(false);
-    resetForgotPasswordForm();
+    forgotEmailForm.reset({ email: '' });
+    forgotOtpForm.reset({ otp: '' });
+    forgotResetForm.reset({ newPassword: '', confirmPassword: '' });
+    setForgotEmail('');
+    setForgotOtp('');
   };
 
   const registerStaffSelectOptions = [
@@ -176,26 +215,22 @@ export default function LoginScreen() {
     ? 'Đang tải danh sách nhân viên...'
     : registerStaffError;
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Toast.show({ type: 'error', text1: 'Vui lòng nhập email và mật khẩu' });
-      return;
-    }
-
+  const onLogin = loginForm.handleSubmit(async (values) => {
+    const normalizedEmail = normalizeEmail(values.email);
     try {
-      await login(normalizeEmail(email), password);
+      await login(normalizedEmail, values.password);
     } catch (error: any) {
       const errorCode = error?.response?.data?.code;
       const message = getErrorMessage(error, 'Đăng nhập thất bại');
 
       if (errorCode === ACCOUNT_NOT_VERIFIED_CODE) {
-        setEmail(normalizeEmail(email));
-        openVerifyModal(email);
+        loginForm.setValue('email', normalizedEmail);
+        openVerifyModal(normalizedEmail);
       }
 
       Toast.show({ type: 'error', text1: 'Lỗi đăng nhập', text2: message });
     }
-  };
+  });
 
   const handleGoogleLogin = async () => {
     if (GOOGLE_LOGIN_DISABLED) return;
@@ -247,47 +282,22 @@ export default function LoginScreen() {
     }
   };
 
-  const handleRegister = async () => {
-    if (!registerName.trim()) {
-      Toast.show({ type: 'error', text1: 'Vui lòng nhập họ tên' });
-      return;
-    }
-
-    if (!registerEmail.trim()) {
-      Toast.show({ type: 'error', text1: 'Vui lòng nhập email' });
-      return;
-    }
-
-    if (!registerPhone.trim()) {
-      Toast.show({ type: 'error', text1: 'Vui lòng nhập số điện thoại' });
-      return;
-    }
-
-    if (registerPassword.trim().length < 6) {
-      Toast.show({ type: 'error', text1: 'Mật khẩu phải có ít nhất 6 ký tự' });
-      return;
-    }
-
-    if (registerPassword !== registerPasswordConfirm) {
-      Toast.show({ type: 'error', text1: 'Mật khẩu xác nhận không khớp' });
-      return;
-    }
-
+  const onRegister = registerForm.handleSubmit(async (values) => {
     try {
       setIsRegisterLoading(true);
-      const normalizedRegisterEmail = normalizeEmail(registerEmail);
+      const normalizedRegisterEmail = normalizeEmail(values.email);
       await registerCustomer({
-        fullName: registerName.trim(),
+        fullName: values.fullName,
         email: normalizedRegisterEmail,
-        phone: registerPhone.trim(),
-        password: registerPassword,
+        phone: values.phone,
+        password: values.password,
         locale: 'vi',
-        ...(registerStaffId ? { staffId: registerStaffId } : {}),
+        ...(values.staffId ? { staffId: values.staffId } : {}),
       });
-      setEmail(normalizedRegisterEmail);
-      setPassword('');
+      loginForm.setValue('email', normalizedRegisterEmail);
+      loginForm.setValue('password', '');
       setIsRegisterVisible(false);
-      resetRegisterForm();
+      registerForm.reset();
       openVerifyModal(normalizedRegisterEmail);
       Toast.show({
         type: 'success',
@@ -303,20 +313,20 @@ export default function LoginScreen() {
     } finally {
       setIsRegisterLoading(false);
     }
-  };
+  });
 
   const handleRequestVerifyOtp = async () => {
-    const resolvedEmail = normalizeEmail(verifyEmailValue || email);
+    const resolvedEmail = normalizeEmail(verifyForm.getValues('email'));
 
     if (!resolvedEmail) {
-      Toast.show({ type: 'error', text1: 'Vui lòng nhập email để nhận OTP' });
+      verifyForm.setError('email', { message: 'Vui lòng nhập email để nhận OTP' });
       return;
     }
 
     try {
       setIsRequestOtpLoading(true);
       await requestOtp(resolvedEmail);
-      setVerifyEmailValue(resolvedEmail);
+      verifyForm.setValue('email', resolvedEmail);
       Toast.show({
         type: 'success',
         text1: 'Đã gửi OTP',
@@ -333,23 +343,12 @@ export default function LoginScreen() {
     }
   };
 
-  const handleVerifyOtp = async () => {
-    const resolvedEmail = normalizeEmail(verifyEmailValue || email);
-
-    if (!resolvedEmail) {
-      Toast.show({ type: 'error', text1: 'Vui lòng nhập email xác thực' });
-      return;
-    }
-
-    if (otpCode.trim().length !== 6) {
-      Toast.show({ type: 'error', text1: 'Mã OTP phải gồm 6 ký tự' });
-      return;
-    }
-
+  const onVerifyOtp = verifyForm.handleSubmit(async (values) => {
+    const resolvedEmail = normalizeEmail(values.email);
     try {
       setIsVerifyLoading(true);
-      await verifyOtp(resolvedEmail, otpCode.trim());
-      setEmail(resolvedEmail);
+      await verifyOtp(resolvedEmail, values.otp);
+      loginForm.setValue('email', resolvedEmail);
       closeVerifyModal();
       Toast.show({
         type: 'success',
@@ -365,20 +364,14 @@ export default function LoginScreen() {
     } finally {
       setIsVerifyLoading(false);
     }
-  };
+  });
 
-  const handleForgotPasswordSendOtp = async () => {
-    const resolvedEmail = normalizeEmail(forgotPasswordEmail);
-
-    if (!resolvedEmail) {
-      Toast.show({ type: 'error', text1: 'Vui lòng nhập email để nhận mã OTP' });
-      return;
-    }
-
+  const onForgotPasswordSendOtp = forgotEmailForm.handleSubmit(async (values) => {
+    const resolvedEmail = normalizeEmail(values.email);
     try {
       setIsForgotPasswordSendOtpLoading(true);
       await sendForgotPasswordOtp(resolvedEmail, 'vi');
-      setForgotPasswordEmail(resolvedEmail);
+      setForgotEmail(resolvedEmail);
       setIsForgotPasswordEmailVisible(false);
       setIsForgotPasswordOtpVisible(true);
       setTimeout(() => {
@@ -397,50 +390,32 @@ export default function LoginScreen() {
     } finally {
       setIsForgotPasswordSendOtpLoading(false);
     }
-  };
+  });
 
-  const handleForgotPasswordContinue = () => {
-    if (forgotPasswordOtp.trim().length !== 6) {
-      Toast.show({ type: 'error', text1: 'Mã OTP phải gồm 6 ký tự' });
-      return;
-    }
-
+  const onForgotPasswordContinue = forgotOtpForm.handleSubmit((values) => {
+    setForgotOtp(values.otp);
     setIsForgotPasswordOtpVisible(false);
     setIsForgotPasswordResetVisible(true);
-  };
+  });
 
-  const handleForgotPasswordReset = async () => {
-    const resolvedEmail = normalizeEmail(forgotPasswordEmail);
+  const onForgotPasswordReset = forgotResetForm.handleSubmit(async (values) => {
+    const resolvedEmail = normalizeEmail(forgotEmail);
 
-    if (!resolvedEmail) {
-      Toast.show({ type: 'error', text1: 'Thiếu email khôi phục mật khẩu' });
-      return;
-    }
-
-    if (forgotPasswordOtp.trim().length !== 6) {
-      Toast.show({ type: 'error', text1: 'Mã OTP phải gồm 6 ký tự' });
-      return;
-    }
-
-    if (forgotPasswordNewPassword.trim().length < 6) {
-      Toast.show({ type: 'error', text1: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
-      return;
-    }
-
-    if (forgotPasswordNewPassword !== forgotPasswordConfirmPassword) {
-      Toast.show({ type: 'error', text1: 'Xác nhận mật khẩu không khớp' });
+    if (!resolvedEmail || forgotOtp.trim().length !== 6) {
+      Toast.show({
+        type: 'error',
+        text1: 'Thiếu thông tin khôi phục',
+        text2: 'Vui lòng thực hiện lại từ bước nhập email.',
+      });
+      closeForgotPasswordFlow();
       return;
     }
 
     try {
       setIsForgotPasswordResetLoading(true);
-      await resetPasswordWithOtp(
-        resolvedEmail,
-        forgotPasswordOtp.trim(),
-        forgotPasswordNewPassword,
-      );
-      setEmail(resolvedEmail);
-      setPassword('');
+      await resetPasswordWithOtp(resolvedEmail, forgotOtp.trim(), values.newPassword);
+      loginForm.setValue('email', resolvedEmail);
+      loginForm.setValue('password', '');
       closeForgotPasswordFlow();
       Toast.show({
         type: 'success',
@@ -456,7 +431,9 @@ export default function LoginScreen() {
     } finally {
       setIsForgotPasswordResetLoading(false);
     }
-  };
+  });
+
+  const isLoginDisabled = isLoading || !loginForm.formState.isValid;
 
   return (
     <>
@@ -485,37 +462,57 @@ export default function LoginScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="email@example.com"
-                placeholderTextColor={colors.textMuted}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
+              <Controller
+                control={loginForm.control}
+                name="email"
+                render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+                  <>
+                    <TextInput
+                      style={[styles.input, error && styles.inputError]}
+                      placeholder="email@example.com"
+                      placeholderTextColor={colors.textMuted}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={!isLoading}
+                    />
+                    {error ? <Text style={styles.fieldError}>{error.message}</Text> : null}
+                  </>
+                )}
               />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Mật khẩu</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="********"
-                placeholderTextColor={colors.textMuted}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                editable={!isLoading}
-                onSubmitEditing={handleLogin}
+              <Controller
+                control={loginForm.control}
+                name="password"
+                render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
+                  <>
+                    <TextInput
+                      style={[styles.input, error && styles.inputError]}
+                      placeholder="********"
+                      placeholderTextColor={colors.textMuted}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      secureTextEntry
+                      editable={!isLoading}
+                      onSubmitEditing={onLogin}
+                    />
+                    {error ? <Text style={styles.fieldError}>{error.message}</Text> : null}
+                  </>
+                )}
               />
             </View>
 
             <Pressable
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
-              disabled={isLoading}
+              style={[styles.loginButton, isLoginDisabled && styles.loginButtonDisabled]}
+              onPress={onLogin}
+              disabled={isLoginDisabled}
             >
               {isLoading ? (
                 <ActivityIndicator color={colors.black} />
@@ -567,65 +564,77 @@ export default function LoginScreen() {
         onClose={closeRegisterModal}
         keyboardContentMaxHeight={228}
       >
-        <AppInput label="Họ tên" value={registerName} onChangeText={setRegisterName} />
-        <AppInput
+        <FormInput control={registerForm.control} name="fullName" label="Họ tên" />
+        <FormInput
+          control={registerForm.control}
+          name="email"
           label="Email"
-          value={registerEmail}
-          onChangeText={setRegisterEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
         />
-        <AppInput
+        <FormInput
+          control={registerForm.control}
+          name="phone"
           label="Số điện thoại"
-          value={registerPhone}
-          onChangeText={setRegisterPhone}
           keyboardType="phone-pad"
         />
-        <AppInput
+        <FormInput
+          control={registerForm.control}
+          name="password"
           label="Mật khẩu"
-          value={registerPassword}
-          onChangeText={setRegisterPassword}
           secureTextEntry
         />
-        <AppInput
+        <FormInput
+          control={registerForm.control}
+          name="passwordConfirm"
           label="Nhập lại mật khẩu"
-          value={registerPasswordConfirm}
-          onChangeText={setRegisterPasswordConfirm}
           secureTextEntry
         />
-        <SelectSheet
-          label="Nhân viên giới thiệu"
-          value={registerStaffId}
-          options={registerStaffSelectOptions}
-          onChange={setRegisterStaffId}
-          onOpen={() => {
-            if (!isRegisterStaffLoading && !registerStaffOptions.length) {
-              void loadRegisterStaff();
-            }
-          }}
-          statusText={registerStaffStatusText}
-          statusTone={registerStaffError && !isRegisterStaffLoading ? 'error' : 'muted'}
+        <Controller
+          control={registerForm.control}
+          name="staffId"
+          render={({ field: { value, onChange } }) => (
+            <SelectSheet
+              label="Nhân viên giới thiệu"
+              value={value}
+              options={registerStaffSelectOptions}
+              onChange={onChange}
+              onOpen={() => {
+                if (!isRegisterStaffLoading && !registerStaffOptions.length) {
+                  void loadRegisterStaff();
+                }
+              }}
+              statusText={registerStaffStatusText}
+              statusTone={registerStaffError && !isRegisterStaffLoading ? 'error' : 'muted'}
+            />
+          )}
         />
         <View style={styles.modalActions}>
           <AppButton title="Đóng" variant="outline" onPress={closeRegisterModal} style={{ flex: 1 }} />
-          <AppButton title="Đăng ký" onPress={handleRegister} isLoading={isRegisterLoading} style={{ flex: 1 }} />
+          <AppButton
+            title="Đăng ký"
+            onPress={onRegister}
+            isLoading={isRegisterLoading}
+            disabled={!registerForm.formState.isValid}
+            style={{ flex: 1 }}
+          />
         </View>
       </ModalShell>
 
       <ModalShell visible={isVerifyVisible} title="Xác thực OTP" onClose={closeVerifyModal}>
-        <AppInput
+        <FormInput
+          control={verifyForm.control}
+          name="email"
           label="Email"
-          value={verifyEmailValue}
-          onChangeText={setVerifyEmailValue}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
         />
-        <AppInput
+        <FormInput
+          control={verifyForm.control}
+          name="otp"
           label="Mã OTP"
-          value={otpCode}
-          onChangeText={setOtpCode}
           keyboardType="number-pad"
           autoCapitalize="none"
         />
@@ -636,7 +645,12 @@ export default function LoginScreen() {
             onPress={handleRequestVerifyOtp}
             isLoading={isRequestOtpLoading}
           />
-          <AppButton title="Xác thực" onPress={handleVerifyOtp} isLoading={isVerifyLoading} />
+          <AppButton
+            title="Xác thực"
+            onPress={onVerifyOtp}
+            isLoading={isVerifyLoading}
+            disabled={!verifyForm.formState.isValid}
+          />
         </View>
       </ModalShell>
 
@@ -648,18 +662,19 @@ export default function LoginScreen() {
         <Text style={styles.modalHelperText}>
           Nhập email của bạn để nhận mã OTP đặt lại mật khẩu.
         </Text>
-        <AppInput
+        <FormInput
+          control={forgotEmailForm.control}
+          name="email"
           label="Email"
-          value={forgotPasswordEmail}
-          onChangeText={setForgotPasswordEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
         />
         <AppButton
           title="Gửi mã OTP"
-          onPress={handleForgotPasswordSendOtp}
+          onPress={onForgotPasswordSendOtp}
           isLoading={isForgotPasswordSendOtpLoading}
+          disabled={!forgotEmailForm.formState.isValid}
         />
       </ModalShell>
 
@@ -669,16 +684,20 @@ export default function LoginScreen() {
         onClose={closeForgotPasswordFlow}
       >
         <Text style={styles.modalHelperText}>
-          Nhập mã OTP đã được gửi tới email {forgotPasswordEmail || 'của bạn'}.
+          Nhập mã OTP đã được gửi tới email {forgotEmail || 'của bạn'}.
         </Text>
-        <AppInput
+        <FormInput
+          control={forgotOtpForm.control}
+          name="otp"
           label="Mã OTP"
-          value={forgotPasswordOtp}
-          onChangeText={setForgotPasswordOtp}
           keyboardType="number-pad"
           autoCapitalize="none"
         />
-        <AppButton title="Tiếp tục" onPress={handleForgotPasswordContinue} />
+        <AppButton
+          title="Tiếp tục"
+          onPress={onForgotPasswordContinue}
+          disabled={!forgotOtpForm.formState.isValid}
+        />
       </ModalShell>
 
       <ModalShell
@@ -687,24 +706,25 @@ export default function LoginScreen() {
         onClose={closeForgotPasswordFlow}
       >
         <Text style={styles.modalHelperText}>
-          Tạo mật khẩu mới cho tài khoản {forgotPasswordEmail || 'của bạn'}.
+          Tạo mật khẩu mới cho tài khoản {forgotEmail || 'của bạn'}.
         </Text>
-        <AppInput
+        <FormInput
+          control={forgotResetForm.control}
+          name="newPassword"
           label="Mật khẩu mới"
-          value={forgotPasswordNewPassword}
-          onChangeText={setForgotPasswordNewPassword}
           secureTextEntry
         />
-        <AppInput
+        <FormInput
+          control={forgotResetForm.control}
+          name="confirmPassword"
           label="Xác nhận mật khẩu"
-          value={forgotPasswordConfirmPassword}
-          onChangeText={setForgotPasswordConfirmPassword}
           secureTextEntry
         />
         <AppButton
           title="Đặt lại mật khẩu"
-          onPress={handleForgotPasswordReset}
+          onPress={onForgotPasswordReset}
           isLoading={isForgotPasswordResetLoading}
+          disabled={!forgotResetForm.formState.isValid}
         />
       </ModalShell>
     </>
@@ -796,6 +816,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilyForWeight('700'),
     color: colors.textPrimary,
     backgroundColor: colors.surface,
+  },
+  inputError: {
+    borderColor: colors.error,
+  },
+  fieldError: {
+    fontSize: typography.fontSize.xs,
+    color: colors.error,
+    marginTop: spacing.xs,
   },
   loginButton: {
     height: 52,
