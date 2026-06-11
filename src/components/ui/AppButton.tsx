@@ -82,6 +82,11 @@ export function AppButton({
     <Pressable
       style={resolveStyle}
       disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: isDisabled, busy: isLoading }}
+      // Nút sm cao 36px — hitSlop bù để vùng chạm đạt tối thiểu 44px.
+      hitSlop={size === 'sm' ? 6 : undefined}
       {...props}
     >
       {isLoading ? (

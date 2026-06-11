@@ -26,6 +26,9 @@ export function SegmentedControl<T extends string>({
           <Pressable
             key={segment.value}
             style={[styles.segment, active && styles.activeSegment]}
+            accessibilityRole="tab"
+            accessibilityLabel={segment.label}
+            accessibilityState={{ selected: active }}
             onPress={() => onChange(segment.value)}
           >
             <Text style={[styles.text, active && styles.activeText]}>{segment.label}</Text>
@@ -48,7 +51,7 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
-    minHeight: 38,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: borderRadius.md,

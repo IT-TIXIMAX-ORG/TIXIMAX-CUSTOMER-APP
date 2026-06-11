@@ -55,7 +55,13 @@ export function ModalShell({
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
-            <Pressable style={styles.close} onPress={onClose}>
+            <Pressable
+              style={styles.close}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Đóng"
+              hitSlop={8}
+            >
               <Feather name="x" size={18} color={colors.textSecondary} />
             </Pressable>
           </View>
