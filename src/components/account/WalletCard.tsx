@@ -27,6 +27,8 @@ export function WalletCard({ balance, onDeposit }: Props) {
           onPress={onDeposit}
           accessibilityRole="button"
           accessibilityLabel="Nạp tiền vào ví"
+          // Nút cao 32px — hitSlop bù để vùng chạm đạt tối thiểu 44px.
+          hitSlop={8}
         >
           <Text style={styles.depositText}>Nạp tiền</Text>
         </Pressable>

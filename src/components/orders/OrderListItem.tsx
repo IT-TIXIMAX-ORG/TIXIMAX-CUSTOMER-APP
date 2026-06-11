@@ -33,7 +33,12 @@ export function OrderListItem({ order }: OrderListItemProps) {
   const amount = order.finalPriceOrder ?? order.paymentAfterAuction ?? 0;
 
   return (
-    <Pressable style={styles.container} onPress={() => router.push(`/orders/${order.orderId}`)}>
+    <Pressable
+      style={styles.container}
+      accessibilityRole="button"
+      accessibilityLabel={`Xem chi tiết đơn ${order.orderCode}`}
+      onPress={() => router.push(`/orders/${order.orderId}`)}
+    >
       <View style={styles.header}>
         <View style={styles.iconContainer}>
           <Feather name={getOrderTypeIcon()} size={20} color={colors.primaryDark} />

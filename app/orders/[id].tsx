@@ -846,6 +846,8 @@ function StaffBar({ staff }: { staff: SupportStaff }) {
       {staff.phone ? (
         <Pressable
           style={styles.staffCallBtn}
+          accessibilityRole="button"
+          accessibilityLabel={`Gọi nhân viên hỗ trợ ${staff.phone}`}
           onPress={() => void Linking.openURL(`tel:${staff.phone}`)}
         >
           <Text style={styles.staffCallBtnText}>Liên hệ ngay</Text>
@@ -887,8 +889,9 @@ function InfoRow({ label, value, highlight }: { label: string; value: string; hi
 function CopyableInfoRow({ label, value, toastText }: { label: string; value: string; toastText: string }) {
   return (
     <Pressable
-      style={styles.detailRow}
+      style={[styles.detailRow, styles.copyRowTouch]}
       accessibilityRole="button"
+      accessibilityLabel={`Sao chép ${label}`}
       onPress={async () => {
         await Clipboard.setStringAsync(value);
         Toast.show({ type: 'success', text1: toastText });
@@ -951,6 +954,8 @@ function PaymentSessionCard({
         {session.paymentCode ? (
           <Pressable
             style={styles.paymentInfoRow}
+            accessibilityRole="button"
+            accessibilityLabel="Sao chép mã thanh toán"
             onPress={async () => {
               await Clipboard.setStringAsync(session.paymentCode || '');
               Toast.show({ type: 'success', text1: 'Đã copy mã thanh toán' });
@@ -968,6 +973,8 @@ function PaymentSessionCard({
         {session.amount != null ? (
           <Pressable
             style={styles.paymentInfoRow}
+            accessibilityRole="button"
+            accessibilityLabel="Sao chép số tiền chuyển khoản"
             onPress={async () => {
               await Clipboard.setStringAsync(String(session.amount));
               Toast.show({ type: 'success', text1: 'Đã copy số tiền' });
@@ -984,7 +991,11 @@ function PaymentSessionCard({
         {/* QR Code — skeleton trong lúc tải, ẩn hẳn nếu ảnh lỗi; viền cam nếu đang chờ */}
         {showQr ? (
           <View style={[styles.qrCenterBox, isPending && styles.qrCenterBoxActive]}>
-            <Pressable onPress={() => onViewImage(session.qrCode!)}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Phóng to mã QR thanh toán"
+              onPress={() => onViewImage(session.qrCode!)}
+            >
               <View style={styles.qrImageSquare}>
                 <Image
                   source={{ uri: session.qrCode! }}
@@ -1016,6 +1027,8 @@ function PaymentSessionCard({
             {showQr ? (
               <Pressable
                 style={styles.qrBtnPrimary}
+                accessibilityRole="button"
+                accessibilityLabel="Xem mã QR"
                 onPress={() => onViewImage(session.qrCode!)}
               >
                 <Feather name="maximize-2" size={13} color={colors.black} />
@@ -1025,6 +1038,8 @@ function PaymentSessionCard({
             {session.content ? (
               <Pressable
                 style={styles.qrBtnSecondary}
+                accessibilityRole="button"
+                accessibilityLabel="Sao chép nội dung chuyển khoản"
                 onPress={async () => {
                   await Clipboard.setStringAsync(session.content || '');
                   Toast.show({ type: 'success', text1: 'Đã copy nội dung chuyển khoản' });
@@ -1398,6 +1413,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 4,
   },
+  // Chỉ áp cho hàng copy được (detailRow dùng chung với hàng tĩnh nên không bump trực tiếp).
+  copyRowTouch: {
+    minHeight: 44,
+    alignItems: 'center',
+  },
   copyValueText: {
     flex: 0,
   },
@@ -1571,6 +1591,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
+    minHeight: 44,
   },
   timelineToggleText: {
     color: colors.primaryDark,
@@ -1716,6 +1737,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
+    minHeight: 44,
+    justifyContent: 'center',
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -1742,6 +1765,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: spacing.xs,
+    // Hàng copy được (mã TT / số tiền) — đảm bảo vùng chạm tối thiểu 44px.
+    minHeight: 44,
   },
   paymentInfoLabel: {
     fontSize: typography.fontSize.xs,
@@ -1815,6 +1840,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.sm,
+    minHeight: 44,
   },
   qrBtnSecondary: {
     flex: 1,
@@ -1827,6 +1853,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.sm,
+    minHeight: 44,
   },
   qrBtnText: {
     fontSize: typography.fontSize.sm,

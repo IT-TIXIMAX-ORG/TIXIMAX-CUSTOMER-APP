@@ -513,6 +513,9 @@ export default function LoginScreen() {
               style={[styles.loginButton, isLoginDisabled && styles.loginButtonDisabled]}
               onPress={onLogin}
               disabled={isLoginDisabled}
+              accessibilityRole="button"
+              accessibilityLabel="Đăng nhập"
+              accessibilityState={{ disabled: isLoginDisabled, busy: isLoading }}
             >
               {isLoading ? (
                 <ActivityIndicator color={colors.black} />
@@ -546,11 +549,22 @@ export default function LoginScreen() {
               </>
             ) : null}
 
-            <Pressable style={styles.registerCta} onPress={() => setIsRegisterVisible(true)}>
+            <Pressable
+              style={styles.registerCta}
+              accessibilityRole="button"
+              accessibilityLabel="Đăng ký tài khoản mới"
+              onPress={() => setIsRegisterVisible(true)}
+            >
               <Text style={styles.registerCtaText}>Đăng ký</Text>
             </Pressable>
 
-            <Pressable style={styles.secondaryLink} onPress={openForgotPasswordEmailModal}>
+            <Pressable
+              style={styles.secondaryLink}
+              accessibilityRole="button"
+              accessibilityLabel="Quên mật khẩu"
+              hitSlop={8}
+              onPress={openForgotPasswordEmailModal}
+            >
               <Text style={styles.secondaryLinkText}>Quên mật khẩu</Text>
             </Pressable>
         </View>

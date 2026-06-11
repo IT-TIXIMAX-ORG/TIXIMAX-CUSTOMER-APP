@@ -349,7 +349,13 @@ export default function CreateOrderScreen() {
     >
       {selectedType ? (
         <View>
-          <Pressable style={styles.backButton} onPress={() => setSelectedType(null)}>
+          <Pressable
+            style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="Quay lại chọn loại đơn"
+            hitSlop={8}
+            onPress={() => setSelectedType(null)}
+          >
             <Feather name="chevron-left" size={16} color={colors.textSecondary} />
             <Text style={styles.backText}>Quay lại</Text>
           </Pressable>
@@ -436,6 +442,9 @@ export default function CreateOrderScreen() {
               </View>
               <Pressable
                 style={styles.checkRow}
+                accessibilityRole="checkbox"
+                accessibilityLabel="Yêu cầu kiểm hàng"
+                accessibilityState={{ checked: checkRequired }}
                 onPress={() => form.setValue('checkRequired', !checkRequired)}
               >
                 <Feather name={checkRequired ? 'check-square' : 'square'} size={18} color={colors.primaryDark} />
@@ -559,7 +568,13 @@ export default function CreateOrderScreen() {
           <Text style={styles.subtitle}>Chọn loại đơn hàng bạn muốn tạo trên mobile.</Text>
           <View style={styles.grid}>
             {orderTypes.map((type) => (
-              <Pressable key={type.id} style={styles.card} onPress={() => handleSelectType(type)}>
+              <Pressable
+                key={type.id}
+                style={styles.card}
+                accessibilityRole="button"
+                accessibilityLabel={`Tạo đơn ${type.title}`}
+                onPress={() => handleSelectType(type)}
+              >
                 <View style={styles.iconWrapper}>
                   <Feather name={type.icon} size={28} color={colors.primaryDark} />
                 </View>
@@ -805,6 +820,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.md,
+    minHeight: 44,
   },
   checkText: {
     color: colors.textPrimary,

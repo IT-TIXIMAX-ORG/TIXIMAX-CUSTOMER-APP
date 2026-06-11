@@ -500,10 +500,22 @@ export default function AccountScreen() {
                 <Text style={styles.addressName}>{address.addressName || 'Địa chỉ nhận hàng'}</Text>
                 <Text style={styles.addressLine}>{[address.streetAddress, address.ward, address.province].filter(Boolean).join(', ')}</Text>
               </View>
-              <Pressable onPress={() => openAddressEditor(String(address.addressId))} style={styles.iconButton} hitSlop={8}>
+              <Pressable
+                onPress={() => openAddressEditor(String(address.addressId))}
+                style={styles.iconButton}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Sửa địa chỉ"
+              >
                 <Feather name="edit-2" size={16} color={colors.primaryDark} />
               </Pressable>
-              <Pressable onPress={() => promptRemoveAddress(String(address.addressId))} style={styles.iconButton} hitSlop={8}>
+              <Pressable
+                onPress={() => promptRemoveAddress(String(address.addressId))}
+                style={styles.iconButton}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Xóa địa chỉ"
+              >
                 <Feather name="trash-2" size={16} color={colors.error} />
               </Pressable>
             </View>

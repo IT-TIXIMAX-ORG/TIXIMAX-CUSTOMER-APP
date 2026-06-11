@@ -36,7 +36,12 @@ export function StaffCard({ name, phone }: StaffCardProps) {
         </View>
       </View>
       {phone ? (
-        <Pressable style={styles.callButton} onPress={handleCall}>
+        <Pressable
+          style={styles.callButton}
+          accessibilityRole="button"
+          accessibilityLabel={`Gọi nhân viên hỗ trợ ${phone}`}
+          onPress={handleCall}
+        >
           <Text style={styles.callButtonText}>Gọi ngay</Text>
         </Pressable>
       ) : null}
@@ -125,6 +130,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   callButtonText: {
     color: colors.white,
