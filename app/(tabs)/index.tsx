@@ -17,18 +17,9 @@ import { useAuthUser } from '@/src/features/auth/hooks/use-auth-store';
 import { useCustomerProfile } from '@/src/features/customer-portal/shared/hooks/use-customer-profile';
 import { useCustomerActiveOrders } from '@/src/features/customer-portal/shared/hooks/use-customer-portal-data';
 import { formatCurrency } from '@/src/shared/lib/utils';
-import { normalizeLabelKey } from '@/src/shared/lib/labels';
 import { StaffCard } from '@/src/components/dashboard/StaffCard';
+import { isPendingPaymentStatus } from '@/src/features/customer-portal/shared/lib/payment-status';
 import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
-
-// Các trạng thái đơn cần người dùng hành động (thanh toán) — dùng cho thẻ "Cần chú ý".
-const PAYMENT_PENDING_STATUSES = new Set([
-  'CHO_THANH_TOAN',
-  'CHO_THANH_TOAN_DAU_GIA',
-  'CHUA_THANH_TOAN',
-  'WAITING_FOR_PAYMENT',
-  'CHO_THANH_TOAN_SHIP',
-]);
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -43,7 +34,7 @@ export default function DashboardScreen() {
   const activeOrders = activeOrdersData?.content || [];
   const displayName = profile?.name || user?.name || 'Khách hàng';
   const pendingPaymentOrders = activeOrders.filter((order) =>
-    PAYMENT_PENDING_STATUSES.has(normalizeLabelKey(order.orderStatus)),
+    isPendingPaymentStatus(order.orderStatus),
   );
   const pendingPaymentCount = pendingPaymentOrders.length;
 

@@ -8,6 +8,7 @@ import { StatusBadge } from '../ui/StatusBadge';
 import { formatCurrency, formatDate } from '@/src/shared/lib/utils';
 import { orderTypeLabel } from '@/src/shared/lib/labels';
 import type { CustomerOrder } from '@/src/features/customer-portal/shared/types/customer-portal.types';
+import { isPendingPaymentStatus } from '@/src/features/customer-portal/shared/lib/payment-status';
 
 type FeatherIconName = ComponentProps<typeof Feather>['name'];
 
@@ -31,12 +32,17 @@ export function OrderListItem({ order }: OrderListItemProps) {
   };
 
   const amount = order.finalPriceOrder ?? order.paymentAfterAuction ?? 0;
+  const hasUnpaidPayment = isPendingPaymentStatus(order.status);
 
   return (
     <Pressable
       style={styles.container}
       accessibilityRole="button"
-      accessibilityLabel={`Xem chi tiết đơn ${order.orderCode}`}
+      accessibilityLabel={
+        hasUnpaidPayment
+          ? `Xem chi tiết đơn ${order.orderCode}, có thanh toán chưa hoàn tất`
+          : `Xem chi tiết đơn ${order.orderCode}`
+      }
       onPress={() => router.push(`/orders/${order.orderId}`)}
     >
       <View style={styles.header}>
@@ -45,7 +51,10 @@ export function OrderListItem({ order }: OrderListItemProps) {
         </View>
         <View style={styles.headerInfo}>
           <Text style={styles.orderType}>{orderTypeLabel(order.orderType)}</Text>
-          <Text style={styles.orderCode}>{order.orderCode}</Text>
+          <View style={styles.orderCodeRow}>
+            <Text style={styles.orderCode} numberOfLines={1}>{order.orderCode}</Text>
+            {hasUnpaidPayment ? <View style={styles.unpaidDot} /> : null}
+          </View>
         </View>
         <StatusBadge status={order.status} />
       </View>
@@ -110,11 +119,23 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 2,
   },
+  orderCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   orderCode: {
+    flexShrink: 1,
     fontSize: typography.fontSize.base,
     fontWeight: '900',
     fontFamily: fontFamilyForWeight('900'),
     color: colors.textPrimary,
+  },
+  unpaidDot: {
+    width: 8,
+    height: 8,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.error,
   },
   content: {
     gap: spacing.xs,
