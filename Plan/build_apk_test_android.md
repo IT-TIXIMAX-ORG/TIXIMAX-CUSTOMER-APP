@@ -3,6 +3,10 @@
 > App `tiximax-customer-app` là **Expo + React Native**, đã prebuild sẵn thư mục `android/`.
 > Tài liệu này hướng dẫn build **1 file APK Release** (ký bằng debug keystore — đủ để cài thử),
 > luôn **xóa bản release cũ** và **lấy code local mới nhất** mỗi lần build.
+>
+> 🆕 **Mới clone repo?** Thư mục `android/` và file `.env` KHÔNG được commit — xem
+> [README.md](../README.md) mục Setup để sinh chúng (`npm install` → tạo `.env` →
+> `npx expo prebuild --platform android` → áp fix MAX_PATH ở [mục 8](#8-fix-loi-max_path-260-ky-tu-windows--new-architecture)) trước khi build.
 
 ---
 

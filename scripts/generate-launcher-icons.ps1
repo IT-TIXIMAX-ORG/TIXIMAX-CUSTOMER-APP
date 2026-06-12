@@ -121,7 +121,14 @@ Write-Output "Trimmed: $($trimmed.Width)x$($trimmed.Height) -> assets\images\log
 [IconGen]::SquareIcon($trimmed, 1024, 74, $true, (Join-Path $root 'assets\app-icons\tiximax-logo-icon.png'))
 Write-Output 'Icon source -> assets\app-icons\tiximax-logo-icon.png'
 
-# 3) Backup icon native cu roi sinh PNG moi
+# 3) Backup icon native cu roi sinh PNG moi (bo qua neu chua co android/ — prebuild se tu sinh tu app.json)
+if (-not (Test-Path $res)) {
+    $trimmed.Dispose(); $logo.Dispose()
+    Write-Output "Chua co thu muc android/ — bo qua phan native res. Chay 'npx expo prebuild --platform android' la du."
+    Write-Output 'DONE'
+    exit 0
+}
+
 $densLegacy = @{ 'mdpi' = 48; 'hdpi' = 72; 'xhdpi' = 96; 'xxhdpi' = 144; 'xxxhdpi' = 192 }
 $densFg     = @{ 'mdpi' = 108; 'hdpi' = 162; 'xhdpi' = 216; 'xxhdpi' = 324; 'xxxhdpi' = 432 }
 
