@@ -150,6 +150,43 @@ Kiểm tra cột **`LastWriteTime`** đúng là thời điểm bạn vừa build
 | Build hết RAM / treo | Tăng `org.gradle.jvmargs` trong `android\gradle.properties` (vd `-Xmx4096m`) |
 | Cần đổi server API test | Sửa `.env` → `EXPO_PUBLIC_API_BASE_URL` → **build lại** APK |
 | Gradle daemon lỗi linh tinh | `Set-Location android; .\gradlew.bat --stop; Set-Location ..` rồi build lại |
+| `ninja: error: Stat(...): Filename longer than 260 characters` (task `:app:buildCMakeRelWithDebInfo`) | Lỗi MAX_PATH của Windows do codegen New Architecture (gesture-handler) tạo đường dẫn quá dài. Xem [mục 8](#8-fix-loi-max_path-260-ky-tu-windows--new-architecture) |
+| `gradlew clean` fail ở `externalNativeBuildCleanDebug` (GLOB mismatch / add_subdirectory) | Cache native `.cxx` cũ bị hỏng. Bỏ qua `clean`, xóa tay rồi build lại: `gradlew --stop`, xóa `android\app\.cxx`, `android\app\build`, `android\build`, `.expo`, sau đó `assembleRelease` |
+
+---
+
+## 8. Fix lỗi MAX_PATH 260 ký tự (Windows + New Architecture)
+
+App bật **New Architecture** (`newArchEnabled=true` trong `android\gradle.properties`) nên codegen sinh các file C++ shadow node lồng sâu (vd `react-native-gesture-handler`). Trên Windows, đường dẫn file object khi biên dịch vượt **260 ký tự** → ninja báo `Filename longer than 260 characters` và build fail.
+
+> ❌ **Không** tắt New Architecture (Reanimated 4 + worklets bắt buộc bật).
+> ❌ Dời project sang đường dẫn ngắn **cũng không đủ** (vẫn ~300+ ký tự).
+
+Cần **cả 3 bước** sau (mỗi máy chỉ làm 1 lần, trừ bước 3):
+
+**B1 — Bật long path hệ thống** (cần quyền Admin). Mở **PowerShell (Run as Administrator)**:
+```powershell
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" `
+  -Name LongPathsEnabled -Value 1 -PropertyType DWord -Force
+```
+
+**B2 — Cài CMake mới (kèm ninja ≥ 1.11)**. ninja 1.10.2 của `cmake;3.22.1` KHÔNG hỗ trợ long path; cần `cmake;3.31.6` (ninja 1.12.1):
+```powershell
+$sm = "C:\Users\LOC\AppData\Local\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat"
+& $sm "cmake;3.31.6"
+```
+
+**B3 — Ghim project dùng CMake 3.31.6**. Trong `android\app\build.gradle`, block `android { ... }` đã thêm:
+```gradle
+externalNativeBuild {
+    cmake {
+        version "3.31.6"
+    }
+}
+```
+> ⚠️ Nếu chạy lại `npx expo prebuild` thì dòng `version "3.31.6"` sẽ bị **ghi đè/xóa** → phải thêm lại trước khi build.
+
+Sau đó build lại từ [mục 3](#3-xóa-bản-release-cũ--đảm-bảo-lấy-code-mới-nhất).
 
 ---
 
