@@ -12,6 +12,7 @@
     "expo": "~56.0.9",
     "expo-clipboard": "~56.0.4",
     "expo-constants": "~56.0.16",
+    "expo-dev-client": "~56.0.20",
     "expo-font": "~56.0.5",
     "expo-image-picker": "~56.0.16",
     "expo-linking": "~56.0.13",
@@ -47,7 +48,7 @@
   },
   "scripts": {
     "start": "expo start --port 5173",
-    "android": "expo start --android --port 5173",
+    "android": "expo start --dev-client --android --port 5173",
     "ios": "expo start --ios --port 5173",
     "web": "expo start --web --port 5173",
     "check:encoding": "node scripts/check-encoding.js"

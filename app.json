@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "tiximax-customer-app",
+    "name": "Tiximax",
     "slug": "tiximax-customer-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/app-icons/TIXIMAX-icon.png",
+    "icon": "./assets/app-icons/tiximax-logo-icon.png",
     "scheme": "tiximaxcustomerapp",
     "userInterfaceStyle": "light",
     "ios": {
@@ -17,7 +17,7 @@
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/app-icons/TIXIMAX-icon.png"
+        "foregroundImage": "./assets/app-icons/tiximax-logo-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.tiximaxcustomerapp"
@@ -32,7 +32,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/app-icons/TIXIMAX-icon.png",
+          "image": "./assets/images/splash-logo.png",
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
