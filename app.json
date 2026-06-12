@@ -32,7 +32,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/app-icons/TIXIMAX-icon.png",
+          "image": "./assets/images/splash-logo.png",
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }

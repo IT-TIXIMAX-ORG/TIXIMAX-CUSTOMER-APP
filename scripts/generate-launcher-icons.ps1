@@ -137,5 +137,22 @@ foreach ($d in $densLegacy.Keys) {
     Write-Output "mipmap-$d : legacy $($densLegacy[$d])px, foreground $($densFg[$d])px"
 }
 
+# 4) Splash screen (Android 12+: icon bi mask tron ~192/288dp -> logo 60% canvas la an toan)
+[IconGen]::SquareIcon($trimmed, 1024, 60, $false, (Join-Path $root 'assets\images\splash-logo.png'))
+Write-Output 'Splash source -> assets\images\splash-logo.png'
+
+$densSplash = @{ 'mdpi' = 288; 'hdpi' = 432; 'xhdpi' = 576; 'xxhdpi' = 864; 'xxxhdpi' = 1152 }
+foreach ($d in $densSplash.Keys) {
+    $dir = Join-Path $res "drawable-$d"
+    $bdir = Join-Path $backup "drawable-$d"
+    New-Item -ItemType Directory -Force $bdir | Out-Null
+    $old = Join-Path $dir 'splashscreen_logo.png'
+    if ((Test-Path $old) -and -not (Test-Path (Join-Path $bdir 'splashscreen_logo.png'))) {
+        Copy-Item $old $bdir
+    }
+    [IconGen]::SquareIcon($trimmed, $densSplash[$d], 60, $false, $old)
+    Write-Output "drawable-$d : splash $($densSplash[$d])px"
+}
+
 $trimmed.Dispose(); $logo.Dispose()
 Write-Output 'DONE'
