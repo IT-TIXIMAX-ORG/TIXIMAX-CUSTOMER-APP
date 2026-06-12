@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# backup icon launcher cu (sinh boi scripts/generate-launcher-icons.ps1)
+/backup-launcher-icons

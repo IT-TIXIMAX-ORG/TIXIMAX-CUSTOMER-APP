@@ -448,12 +448,11 @@ export default function LoginScreen() {
         <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Image
-                source={require('../../assets/app-icons/TIXIMAX-icon.png')}
+                source={require('../../assets/images/logo-tiximax.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.brandName}>TIXIMAX</Text>
             <Text style={styles.subtitle}>Customer Portal</Text>
         </View>
 
@@ -761,12 +760,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing['2xl'],
   },
   logoContainer: {
-    width: 96,
-    height: 96,
+    width: 240,
+    height: 100,
     borderRadius: borderRadius['2xl'],
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     marginBottom: spacing.md,
     overflow: 'hidden',
     shadowColor: colors.black,
@@ -778,12 +779,6 @@ const styles = StyleSheet.create({
   logoImage: {
     width: '100%',
     height: '100%',
-  },
-  brandName: {
-    fontSize: typography.fontSize['2xl'],
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.textPrimary,
   },
   subtitle: {
     fontSize: typography.fontSize.sm,
