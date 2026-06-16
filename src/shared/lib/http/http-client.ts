@@ -71,6 +71,16 @@ export const httpClient = createJsonClient();
 let refreshPromise: Promise<AuthTokenPair> | null = null;
 let isSessionExpiredNotified = false;
 
+// Handler do auth store đăng ký để reset state khi phiên hết hạn.
+// Dùng pattern đăng ký một chiều để tránh circular import (http-client <-> auth.store).
+let onSessionExpired: (() => void) | null = null;
+
+export const registerSessionExpiredHandler = (
+  handler: (() => void) | null,
+) => {
+  onSessionExpired = handler;
+};
+
 export const resetAuthSessionExpiredNotice = () => {
   isSessionExpiredNotified = false;
 };
@@ -130,6 +140,9 @@ httpClient.interceptors.response.use(
           message: 'Phiên đăng nhập đã hết hạn',
           description: 'Vui lòng đăng nhập lại để tiếp tục thao tác.',
         });
+        // Reset state đăng nhập trong store trước, rồi xóa token + điều hướng.
+        // Nhờ vậy route guard (isAuthenticated) cũng tự đá về login như một lớp dự phòng.
+        onSessionExpired?.();
         clearAuthAndRedirectToLogin();
       }
 
