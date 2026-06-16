@@ -12,6 +12,7 @@ import {
 } from '@/src/shared/lib/auth/auth-storage';
 import {
   authHttpClient,
+  registerSessionExpiredHandler,
   resetAuthSessionExpiredNotice,
 } from '@/src/shared/lib/http/http-client';
 import { getCustomerProfile } from '@/src/features/customer-portal/shared/services/customer-portal.service';
@@ -34,6 +35,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (tokens: { accessToken: string; refreshToken: string }) => Promise<void>;
   logout: () => Promise<void>;
+  clearSession: () => void;
   hydrate: () => Promise<void>;
   setUser: (user: User | null) => void;
 }
@@ -175,5 +177,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  // Reset phiên đăng nhập cục bộ (không gọi API logout).
+  // Dùng khi phiên hết hạn được phát hiện từ interceptor HTTP.
+  clearSession: () => {
+    clearAuthTokens();
+    set({ isAuthenticated: false, user: null });
+  },
+
   setUser: (user: User | null) => set({ user }),
 }));
+
+// Khi interceptor phát hiện phiên hết hạn (refresh thất bại), reset state store
+// để route guard nhận biết người dùng đã đăng xuất.
+registerSessionExpiredHandler(() => {
+  useAuthStore.getState().clearSession();
+});
