@@ -19,6 +19,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
+import { getAppVersionLabel } from '@/src/shared/lib/app-version';
 import { useAuthUser, useAuthActions } from '@/src/features/auth/hooks/use-auth-store';
 import { useCustomerProfile } from '@/src/features/customer-portal/shared/hooks/use-customer-profile';
 import {
@@ -444,6 +445,8 @@ export default function AccountScreen() {
         />
       </MenuSection>
 
+      <Text style={styles.versionText}>{getAppVersionLabel()}</Text>
+
       <ProfileTasksSheet
         visible={modal === 'progress'}
         onClose={() => setModal(null)}
@@ -742,6 +745,15 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.xl,
+  },
+  versionText: {
+    textAlign: 'center',
+    fontSize: typography.fontSize.xs,
+    fontWeight: '600',
+    fontFamily: fontFamilyForWeight('600'),
+    color: colors.textMuted,
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
   },
   title: {
     fontSize: typography.fontSize.xl,

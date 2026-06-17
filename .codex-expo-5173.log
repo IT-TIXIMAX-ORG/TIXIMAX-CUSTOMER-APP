@@ -1,0 +1,78 @@
+env: load .env
+env: export EXPO_PUBLIC_API_BASE_URL EXPO_PUBLIC_DEV_SERVER_PORT PORT RCT_METRO_PORT
+Starting project at D:\Tiximax_FE\tiximax-customer-app
+Starting Metro Bundler
+
+Waiting on http://localhost:5173
+An update for expo is available: 56.0.11 → ~56.0.12
+3 other packages may need updating. Run npx expo install --check for details.
+Logs for your project will appear below.
+Android Bundled 5707ms node_modules\expo-router\entry.js (2332 modules)
+ WARN  Route "./(tabs)/create-order.tsx" is missing the required default export. Ensure a React component is exported as default.
+ ERROR  [Error: Cannot find native module 'ExpoImageManipulator'] 
+
+Code: create-order.tsx
+[0m [90m 13 |[39m [36mimport[39m { [33mFeather[39m } [36mfrom[39m [32m'@expo/vector-icons'[39m[33m;[39m
+ [90m 14 |[39m [36mimport[39m [33m*[39m [36mas[39m [33mImagePicker[39m [36mfrom[39m [32m'expo-image-picker'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 15 |[39m [36mimport[39m [33m*[39m [36mas[39m [33mImageManipulator[39m [36mfrom[39m [32m'expo-image-manipulator'[39m[33m;[39m
+ [90m    |[39m [31m[1m^[22m[39m
+ [90m 16 |[39m [36mimport[39m { useQueryClient } [36mfrom[39m [32m'@tanstack/react-query'[39m[33m;[39m
+ [90m 17 |[39m [36mimport[39m { [33mKeyboardAwareScrollView[39m } [36mfrom[39m [32m'react-native-keyboard-controller'[39m[33m;[39m
+ [90m 18 |[39m [36mimport[39m { useForm[33m,[39m useFieldArray[33m,[39m [33mController[39m } [36mfrom[39m [32m'react-hook-form'[39m[33m;[39m[0m
+Call Stack
+  <global> (app\(tabs)\create-order.tsx:15)
+ ERROR  [Error: Cannot find native module 'ExpoApplication'] 
+
+Code: app-version.ts
+[0m [90m 10 |[39m [36mconst[39m readNativeVersion [33m=[39m ()[33m:[39m { version[33m:[39m string [33m|[39m [36mnull[39m[33m;[39m build[33m:[39m string [33m|[39m [36mnull[39m } [33m=>[39m {
+ [90m 11 |[39m   [36mtry[39m {
+[31m[1m>[22m[39m[90m 12 |[39m     [36mconst[39m [33mApplication[39m [33m=[39m require([32m'expo-application'[39m) [36mas[39m [36mtypeof[39m [36mimport[39m([32m'expo-application'[39m)[33m;[39m
+ [90m    |[39m                                [31m[1m^[22m[39m
+ [90m 13 |[39m     [36mreturn[39m {
+ [90m 14 |[39m       version[33m:[39m [33mApplication[39m[33m.[39mnativeApplicationVersion [33m?[39m[33m?[39m [36mnull[39m[33m,[39m
+ [90m 15 |[39m       build[33m:[39m [33mApplication[39m[33m.[39mnativeBuildVersion [33m?[39m[33m?[39m [36mnull[39m[33m,[39m[0m
+Call Stack
+  readNativeVersion (src\shared\lib\app-version.ts:12:32)
+  getAppVersionLabel (src\shared\lib\app-version.ts:24:47)
+  LoginScreen (app\(auth)\login.tsx:572:56) 
+
+Code: _layout.tsx
+[0m [90m 13 |[39m
+ [90m 14 |[39m   [36mreturn[39m (
+[31m[1m>[22m[39m[90m 15 |[39m     [33m<[39m[33mStack[39m screenOptions[33m=[39m{{ headerShown[33m:[39m [36mfalse[39m }}[33m>[39m
+ [90m    |[39m     [31m[1m^[22m[39m
+ [90m 16 |[39m       [33m<[39m[33mStack[39m[33m.[39m[33mScreen[39m name[33m=[39m[32m"login"[39m [33m/[39m[33m>[39m
+ [90m 17 |[39m     [33m<[39m[33m/[39m[33mStack[39m[33m>[39m
+ [90m 18 |[39m   )[33m;[39m[0m
+Call Stack
+  AuthLayout (app\(auth)\_layout.tsx:15:5)
+  AppContent (app\_layout.tsx:82:7)
+  RootLayout (app\_layout.tsx:142:13)
+ ERROR  [Error: Cannot find native module 'ExpoApplication'] 
+
+Code: app-version.ts
+[0m [90m 10 |[39m [36mconst[39m readNativeVersion [33m=[39m ()[33m:[39m { version[33m:[39m string [33m|[39m [36mnull[39m[33m;[39m build[33m:[39m string [33m|[39m [36mnull[39m } [33m=>[39m {
+ [90m 11 |[39m   [36mtry[39m {
+[31m[1m>[22m[39m[90m 12 |[39m     [36mconst[39m [33mApplication[39m [33m=[39m require([32m'expo-application'[39m) [36mas[39m [36mtypeof[39m [36mimport[39m([32m'expo-application'[39m)[33m;[39m
+ [90m    |[39m                                [31m[1m^[22m[39m
+ [90m 13 |[39m     [36mreturn[39m {
+ [90m 14 |[39m       version[33m:[39m [33mApplication[39m[33m.[39mnativeApplicationVersion [33m?[39m[33m?[39m [36mnull[39m[33m,[39m
+ [90m 15 |[39m       build[33m:[39m [33mApplication[39m[33m.[39mnativeBuildVersion [33m?[39m[33m?[39m [36mnull[39m[33m,[39m[0m
+Call Stack
+  readNativeVersion (src\shared\lib\app-version.ts:12:32)
+  getAppVersionLabel (src\shared\lib\app-version.ts:24:47)
+  LoginScreen (app\(auth)\login.tsx:572:56) 
+
+Code: _layout.tsx
+[0m [90m 13 |[39m
+ [90m 14 |[39m   [36mreturn[39m (
+[31m[1m>[22m[39m[90m 15 |[39m     [33m<[39m[33mStack[39m screenOptions[33m=[39m{{ headerShown[33m:[39m [36mfalse[39m }}[33m>[39m
+ [90m    |[39m     [31m[1m^[22m[39m
+ [90m 16 |[39m       [33m<[39m[33mStack[39m[33m.[39m[33mScreen[39m name[33m=[39m[32m"login"[39m [33m/[39m[33m>[39m
+ [90m 17 |[39m     [33m<[39m[33m/[39m[33mStack[39m[33m>[39m
+ [90m 18 |[39m   )[33m;[39m[0m
+Call Stack
+  AuthLayout (app\(auth)\_layout.tsx:15:5)
+  AppContent (app\_layout.tsx:82:7)
+  RootLayout (app\_layout.tsx:142:13)
+Android Bundled 71ms node_modules\expo-router\entry.js (1 module)
