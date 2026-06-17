@@ -12,6 +12,7 @@ import {
 import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useQueryClient } from '@tanstack/react-query';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -67,6 +68,33 @@ const orderTypes: Array<{
   },
 ];
 
+// Cạnh dài tối đa của ảnh sản phẩm sau khi resize (px) trước khi upload.
+const MAX_IMAGE_DIMENSION = 1600;
+
+// Resize cạnh dài về <= MAX_IMAGE_DIMENSION + nén JPEG trước khi up: tránh trần 5MB của BE,
+// tăng tốc trên mạng yếu, và ép HEIC (iPhone) về JPEG. Nếu native module chưa sẵn (dev build
+// cũ chưa rebuild) thì fallback dùng ảnh gốc thay vì làm hỏng luồng upload.
+const resizeForUpload = async (asset: ImagePicker.ImagePickerAsset): Promise<string> => {
+  try {
+    const longestEdge = Math.max(asset.width ?? 0, asset.height ?? 0);
+    const resizeActions: ImageManipulator.Action[] =
+      longestEdge > MAX_IMAGE_DIMENSION
+        ? [
+            (asset.width ?? 0) >= (asset.height ?? 0)
+              ? { resize: { width: MAX_IMAGE_DIMENSION } }
+              : { resize: { height: MAX_IMAGE_DIMENSION } },
+          ]
+        : [];
+    const processed = await ImageManipulator.manipulateAsync(asset.uri, resizeActions, {
+      compress: 0.7,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
+    return processed.uri;
+  } catch {
+    return asset.uri;
+  }
+};
+
 export default function CreateOrderScreen() {
   const queryClient = useQueryClient();
   const contentPaddingBottom = useTabScreenBottomPadding();
@@ -74,6 +102,7 @@ export default function CreateOrderScreen() {
   const { data: profile, refetch: refetchProfile } = useCustomerProfile();
   const [selectedType, setSelectedType] = useState<OrderTypeId | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingLineIndex, setUploadingLineIndex] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isAddressEditorOpen, setIsAddressEditorOpen] = useState(false);
   const [isAddressConfirmOpen, setIsAddressConfirmOpen] = useState(false);
@@ -223,14 +252,18 @@ export default function CreateOrderScreen() {
     });
     if (result.canceled || !result.assets[0]?.uri) return;
 
-    const uri = result.assets[0].uri;
+    const asset = result.assets[0];
     try {
-      const uploaded = await uploadImageUri(uri, 'orders');
-      form.setValue(`lines.${index}.imageUri`, uri);
+      setUploadingLineIndex(index);
+      const uploadUri = await resizeForUpload(asset);
+      const uploaded = await uploadImageUri(uploadUri, 'orders');
+      form.setValue(`lines.${index}.imageUri`, uploadUri);
       form.setValue(`lines.${index}.imageId`, uploaded.id);
       Toast.show({ type: 'success', text1: 'Đã tải ảnh lên' });
     } catch (error: any) {
       Toast.show({ type: 'error', text1: error?.message || 'Tải ảnh thất bại' });
+    } finally {
+      setUploadingLineIndex(null);
     }
   };
 
@@ -497,6 +530,8 @@ export default function CreateOrderScreen() {
                           size="sm"
                           variant="outline"
                           onPress={() => void pickImage(index)}
+                          isLoading={uploadingLineIndex === index}
+                          disabled={uploadingLineIndex !== null}
                         />
                         {fields.length > 1 ? (
                           <AppButton
@@ -545,6 +580,8 @@ export default function CreateOrderScreen() {
                           size="sm"
                           variant="outline"
                           onPress={() => void pickImage(index)}
+                          isLoading={uploadingLineIndex === index}
+                          disabled={uploadingLineIndex !== null}
                         />
                         {fields.length > 1 ? (
                           <AppButton
