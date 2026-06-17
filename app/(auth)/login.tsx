@@ -31,6 +31,7 @@ import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { FormInput } from '@/src/components/form/FormInput';
 import { colors, spacing, borderRadius, typography, fontFamilyForWeight } from '@/src/theme/tokens';
+import { getAppVersionLabel } from '@/src/shared/lib/app-version';
 import type { ReferralStaffOption } from '@/src/features/customer-portal/shared/types/master-data.types';
 import { ENV_CONFIG } from '@/src/shared/constants/env.constants';
 import {
@@ -568,7 +569,7 @@ export default function LoginScreen() {
             </Pressable>
         </View>
 
-        <Text style={styles.footer}>© 2026 TixiMax. All rights reserved.</Text>
+        <Text style={styles.footer}>{getAppVersionLabel()}</Text>
       </KeyboardAwareScrollView>
 
       <ModalShell
