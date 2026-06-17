@@ -95,6 +95,12 @@ const resizeForUpload = async (asset: ImagePicker.ImagePickerAsset): Promise<str
   }
 };
 
+// "Loại dịch vụ" (Hàng sạch/Hỗn hợp) chỉ áp dụng cho tuyến VND - JPY (VN đi Nhật) → chỉ hiện
+// field này khi chọn đúng tuyến đó; các tuyến khác (kể cả JPY - VND) đều ẩn.
+const SERVICE_TYPE_ROUTE_NAME = 'VND-JPY';
+const isServiceTypeRoute = (route?: { routeName?: string }): boolean =>
+  (route?.routeName ?? '').toUpperCase().replace(/\s+/g, '') === SERVICE_TYPE_ROUTE_NAME;
+
 export default function CreateOrderScreen() {
   const queryClient = useQueryClient();
   const contentPaddingBottom = useTabScreenBottomPadding();
@@ -138,6 +144,8 @@ export default function CreateOrderScreen() {
     refetch: refetchMasterData,
   } = useCreateOrderMasterData(routeId, serviceType, showRouteSection);
   const selectedRoute = routes.find((route) => String(route.routeId) === routeId);
+  // Field "Loại dịch vụ" chỉ hiện cho tuyến VND - JPY; các tuyến khác ẩn đi.
+  const showServiceType = isServiceTypeRoute(selectedRoute);
 
   useEffect(() => {
     if (!showRouteSection) return;
@@ -434,6 +442,10 @@ export default function CreateOrderScreen() {
                         if (route) {
                           form.setValue('exchangeRate', String(route.exchangeRate ?? ''), { shouldValidate: true });
                           form.setValue('priceShip', String(route.shippingFee ?? ''), { shouldValidate: true });
+                          // Tuyến không phải VND - JPY: field "Loại dịch vụ" bị ẩn → ép về mặc định CLEAN.
+                          if (!isServiceTypeRoute(route)) {
+                            form.setValue('serviceType', 'CLEAN', { shouldValidate: true });
+                          }
                         }
                       }}
                       statusText={error?.message}
@@ -443,15 +455,17 @@ export default function CreateOrderScreen() {
                   </View>
                 )}
               />
-              <FormSelect
-                control={form.control}
-                name="serviceType"
-                label="Loại dịch vụ"
-                options={[
-                  { label: 'Hàng sạch', value: 'CLEAN' },
-                  { label: 'Hàng hỗn hợp', value: 'MIXED' },
-                ]}
-              />
+              {showServiceType ? (
+                <FormSelect
+                  control={form.control}
+                  name="serviceType"
+                  label="Loại dịch vụ"
+                  options={[
+                    { label: 'Hàng sạch', value: 'CLEAN' },
+                    { label: 'Hàng hỗn hợp', value: 'MIXED' },
+                  ]}
+                />
+              ) : null}
               <View pointerEvents="none" style={[styles.row, styles.readOnlyRow]}>
                 <View style={styles.col}>
                   <FormInput
