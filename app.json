@@ -21,7 +21,7 @@
         "foregroundImage": "./assets/app-icons/tiximax-logo-icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.tiximaxcustomerapp"
+      "package": "net.tiximax.customer"
     },
     "web": {
       "bundler": "metro",

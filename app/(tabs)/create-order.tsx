@@ -248,6 +248,7 @@ export default function CreateOrderScreen() {
       productName: line.productName.trim(),
       productTypeId: line.productTypeId,
       website: line.website.trim(),
+      purchaseImageId: line.imageId,
     }));
 
   const buildConsignmentLinks = (values: CreateOrderForm) =>
@@ -490,6 +491,23 @@ export default function CreateOrderScreen() {
                         label="Số lượng"
                         keyboardType="numeric"
                       />
+                      <View style={styles.lineActions}>
+                        <AppButton
+                          title={lineImageId ? 'Đổi ảnh sản phẩm' : 'Chọn ảnh sản phẩm'}
+                          size="sm"
+                          variant="outline"
+                          onPress={() => void pickImage(index)}
+                        />
+                        {fields.length > 1 ? (
+                          <AppButton
+                            title="Xóa"
+                            size="sm"
+                            variant="danger"
+                            onPress={() => remove(index)}
+                          />
+                        ) : null}
+                      </View>
+                      <ImagePreview uri={lineImageUri} label="Đã chọn ảnh sản phẩm" />
                     </>
                   ) : (
                     <>
@@ -540,16 +558,6 @@ export default function CreateOrderScreen() {
                       <ImagePreview uri={lineImageUri} label="Đã chọn ảnh sản phẩm" />
                     </>
                   )}
-                  {isPurchaseOrder && fields.length > 1 ? (
-                    <View style={styles.lineActions}>
-                      <AppButton
-                        title="Xóa"
-                        size="sm"
-                        variant="danger"
-                        onPress={() => remove(index)}
-                      />
-                    </View>
-                  ) : null}
                 </View>
               );
             })}

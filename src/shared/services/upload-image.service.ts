@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { File as ExpoFile, UploadType } from 'expo-file-system';
 
 import { ENV_CONFIG } from '@/src/shared/constants/env.constants';
 import { readStoredToken } from '@/src/shared/lib/auth/auth-storage';
@@ -65,27 +66,52 @@ const readErrorMessage = (value: unknown) => {
   return pickString(data, ['message', 'error']) || (typeof detailMessage === 'string' ? detailMessage : '');
 };
 
+// Web only: the browser's fetch + DOM File support multipart from a blob URI.
 const appendImageToFormData = async (formData: FormData, uri: string): Promise<void> => {
-  if (Platform.OS === 'web') {
-    const response = await fetch(uri);
-    if (!response.ok) {
-      throw new Error('Could not read the selected image file.');
-    }
-
-    const blob = await response.blob();
-    const type = inferMimeType(uri, blob.type);
-    const name = inferFileName(uri, type);
-    const file = typeof File === 'function' ? new File([blob], name, { type }) : blob;
-    formData.append('file', file, name);
-    return;
+  const response = await fetch(uri);
+  if (!response.ok) {
+    throw new Error('Could not read the selected image file.');
   }
 
-  const type = inferMimeType(uri);
+  const blob = await response.blob();
+  const type = inferMimeType(uri, blob.type);
   const name = inferFileName(uri, type);
-  formData.append('file', { uri, name, type } as unknown as Blob);
+  const file = typeof File === 'function' ? new File([blob], name, { type }) : blob;
+  formData.append('file', file, name);
+};
+
+// Native: Expo's global fetch (Winter) rejects React Native's { uri, name, type }
+// FormData part ("Unsupported FormDataPart implementation"), so stream the file to
+// the server through expo-file-system's native multipart task instead of fetch.
+const uploadImageUriNative = async (uri: string, folder: string): Promise<UploadImageResult> => {
+  const token = readStoredToken();
+  const result = await new ExpoFile(uri).upload(buildApiUrl(`/media/${folder}`), {
+    httpMethod: 'POST',
+    uploadType: UploadType.MULTIPART,
+    fieldName: 'file',
+    mimeType: inferMimeType(uri),
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+
+  let data: unknown = null;
+  try {
+    data = JSON.parse(result.body);
+  } catch {
+    data = null;
+  }
+
+  if (result.status < 200 || result.status >= 300) {
+    throw new Error(readErrorMessage(data) || 'Image upload failed.');
+  }
+
+  return normalizeUploadResponse(data);
 };
 
 export const uploadImageUri = async (uri: string, folder = 'orders'): Promise<UploadImageResult> => {
+  if (Platform.OS !== 'web') {
+    return uploadImageUriNative(uri, folder);
+  }
+
   const formData = new FormData();
   await appendImageToFormData(formData, uri);
 
