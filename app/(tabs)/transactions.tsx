@@ -25,6 +25,7 @@ import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorState } from '@/src/components/ui/ErrorState';
+import { DatePickerField } from '@/src/components/ui/DatePickerField';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
@@ -322,10 +323,22 @@ export default function TransactionsScreen() {
         <SelectSheet label="Loại giao dịch" value={draftPurpose} options={PURPOSE_OPTIONS} onChange={setDraftPurpose} />
         <View style={styles.dateRow}>
           <View style={styles.dateCol}>
-            <AppInput label="Từ ngày" placeholder="YYYY-MM-DD hoặc DD/MM/YYYY" value={draftDateFrom} onChangeText={setDraftDateFrom} />
+            <DatePickerField
+              label="Từ ngày"
+              value={draftDateFrom}
+              onChange={setDraftDateFrom}
+              maxDate={draftDateTo || undefined}
+              disableFuture
+            />
           </View>
           <View style={styles.dateCol}>
-            <AppInput label="Đến ngày" placeholder="YYYY-MM-DD hoặc DD/MM/YYYY" value={draftDateTo} onChangeText={setDraftDateTo} />
+            <DatePickerField
+              label="Đến ngày"
+              value={draftDateTo}
+              onChange={setDraftDateTo}
+              minDate={draftDateFrom || undefined}
+              disableFuture
+            />
           </View>
         </View>
         <View style={styles.modalActions}>

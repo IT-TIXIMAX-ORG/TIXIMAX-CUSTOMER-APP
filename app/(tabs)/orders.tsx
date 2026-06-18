@@ -40,6 +40,7 @@ import { ActiveOrderCard } from '@/src/components/dashboard/ActiveOrderCard';
 import { OrderListItem } from '@/src/components/orders/OrderListItem';
 import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
+import { DatePickerField } from '@/src/components/ui/DatePickerField';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorState } from '@/src/components/ui/ErrorState';
 import { ModalShell } from '@/src/components/ui/ModalShell';
@@ -68,6 +69,17 @@ const MAIN_STATUS_OPTIONS = [
   { label: 'Đang chuyển VN', value: 'DANG_CHUYEN_VN' },
   { label: 'Chờ giao', value: 'CHO_GIAO' },
 ];
+
+// Filter "Chờ thanh toán" gộp cả CHO_THANH_TOAN (tiền hàng) lẫn CHO_THANH_TOAN_SHIP (vận chuyển)
+// — với khách đây là cùng một việc "cần thanh toán". Chỉ áp cho tab Đang xử lý (active orders nhận
+// mảng order_main_status_in); tab Lịch sử chỉ chứa đơn đã giao/đã hủy nên không có đơn chờ thanh toán.
+const PAYMENT_PENDING_STATUSES = ['CHO_THANH_TOAN', 'CHO_THANH_TOAN_SHIP'];
+
+const toActiveStatusIn = (status: string): string[] => {
+  if (!status) return [];
+  if (status === 'CHO_THANH_TOAN') return PAYMENT_PENDING_STATUSES;
+  return [status];
+};
 
 const isValidDateFilter = (value: string) => {
   if (!value) return true;
@@ -108,7 +120,7 @@ export default function OrdersScreen() {
     () => ({
       keyword: keyword || undefined,
       type: orderType || undefined,
-      orderMainStatusIn: status ? [status] : [],
+      orderMainStatusIn: toActiveStatusIn(status),
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
       sortBy: 'latest_progress_at',
@@ -438,10 +450,22 @@ export default function OrdersScreen() {
         <SelectSheet label="Trạng thái" value={draftStatus} options={MAIN_STATUS_OPTIONS} onChange={setDraftStatus} />
         <View style={styles.dateRow}>
           <View style={styles.dateCol}>
-            <AppInput label="Từ ngày" placeholder="YYYY-MM-DD" value={draftDateFrom} onChangeText={setDraftDateFrom} />
+            <DatePickerField
+              label="Từ ngày"
+              value={draftDateFrom}
+              onChange={setDraftDateFrom}
+              maxDate={draftDateTo || undefined}
+              disableFuture
+            />
           </View>
           <View style={styles.dateCol}>
-            <AppInput label="Đến ngày" placeholder="YYYY-MM-DD" value={draftDateTo} onChangeText={setDraftDateTo} />
+            <DatePickerField
+              label="Đến ngày"
+              value={draftDateTo}
+              onChange={setDraftDateTo}
+              minDate={draftDateFrom || undefined}
+              disableFuture
+            />
           </View>
         </View>
         <View style={styles.modalActions}>
