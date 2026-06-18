@@ -511,6 +511,12 @@ export const deleteCustomerAddress = async (addressId: string): Promise<void> =>
   await httpClient.delete(`/customer-portal/me/address/${addressId}`);
 };
 
+// Xóa tài khoản: BE vô hiệu hóa + ẩn danh PII, giữ chứng từ đơn/thanh toán theo luật kế toán.
+// BE chặn (HTTP 409) nếu còn đơn chưa ở trạng thái DA_GIAO/DA_HUY → message đọc ở error.response.data.message.
+export const deleteCustomerAccount = async (): Promise<void> => {
+  await httpClient.delete('/customer-portal/me/account');
+};
+
 export const requestPhoneOtp = async (phone: string): Promise<void> => {
   await httpClient.post('/customer-portal/phone-otp/request', { phone });
 };
