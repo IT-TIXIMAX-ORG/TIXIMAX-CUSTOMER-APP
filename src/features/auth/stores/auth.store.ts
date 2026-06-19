@@ -15,6 +15,7 @@ import {
   registerSessionExpiredHandler,
   resetAuthSessionExpiredNotice,
 } from '@/src/shared/lib/http/http-client';
+import { queryClient } from '@/src/shared/lib/query/query-client';
 import { getCustomerProfile } from '@/src/features/customer-portal/shared/services/customer-portal.service';
 import type { CustomerProfile } from '@/src/features/customer-portal/shared/types/customer-portal.types';
 
@@ -137,6 +138,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await authHttpClient.post('/auth/login-email', { email, password });
       const user = await persistSession(response.data);
       resetAuthSessionExpiredNotice();
+      // Xóa cache React Query của phiên trước để account mới không đọc nhầm data cũ.
+      queryClient.clear();
       set({ isAuthenticated: true, user });
     } finally {
       set({ isLoading: false });
@@ -151,6 +154,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const user = profileToUser(profile);
       await persistUserData(user);
       resetAuthSessionExpiredNotice();
+      // Xóa cache React Query của phiên trước để account mới không đọc nhầm data cũ.
+      queryClient.clear();
       set({ isAuthenticated: true, user });
     } catch (error) {
       clearAuthTokens();
@@ -166,6 +171,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     const refreshToken = readStoredRefreshToken();
 
     clearAuthTokens();
+    // Xóa cache React Query để không rò data của tài khoản vừa logout.
+    queryClient.clear();
     set({ isAuthenticated: false, user: null });
 
     if (refreshToken) {
@@ -181,6 +188,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   // Dùng khi phiên hết hạn được phát hiện từ interceptor HTTP.
   clearSession: () => {
     clearAuthTokens();
+    // Xóa cache React Query khi phiên hết hạn để phiên kế tiếp bắt đầu sạch.
+    queryClient.clear();
     set({ isAuthenticated: false, user: null });
   },
 

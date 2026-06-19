@@ -1,51 +1,43 @@
-import { View, Text, StyleSheet, Pressable, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
 import { AppCard } from '../ui/AppCard';
+import { SUPPORT_STAFF_PHONE } from '@/src/shared/constants/support';
 
 interface StaffCardProps {
   name: string;
   phone?: string;
   avatarUrl?: string;
+  onContactPress: () => void;
 }
 
-export function StaffCard({ name, phone }: StaffCardProps) {
-  const handleCall = () => {
-    if (phone) {
-      void Linking.openURL(`tel:${phone}`);
-    }
-  };
-
+export function StaffCard({ name, onContactPress }: StaffCardProps) {
   return (
-    <AppCard style={styles.container}>
-      <View style={styles.infoContainer}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{name.charAt(0)}</Text>
-          <View style={styles.onlineBadge} />
-        </View>
-        <View style={styles.textContainer}>
-          <Text style={styles.label}>Nhân viên hỗ trợ</Text>
-          <View style={styles.nameRow}>
-            <Text style={styles.name}>{name}</Text>
-            {phone ? (
-              <>
-                <Text style={styles.divider}>|</Text>
-                <Text style={styles.phone}>{phone}</Text>
-              </>
-            ) : null}
+    <TouchableOpacity
+      activeOpacity={0.78}
+      accessibilityRole="button"
+      accessibilityLabel={`Liên hệ nhân viên hỗ trợ ${SUPPORT_STAFF_PHONE}`}
+      onPress={onContactPress}
+    >
+      <AppCard style={styles.container}>
+        <View style={styles.infoContainer}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{name.charAt(0)}</Text>
+            <View style={styles.onlineBadge} />
+          </View>
+          <View style={styles.textContainer}>
+            <Text style={styles.label}>Nhân viên hỗ trợ</Text>
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>{name}</Text>
+              <Text style={styles.divider}>|</Text>
+              <Text style={styles.phone}>{SUPPORT_STAFF_PHONE}</Text>
+            </View>
           </View>
         </View>
-      </View>
-      {phone ? (
-        <Pressable
-          style={styles.callButton}
-          accessibilityRole="button"
-          accessibilityLabel={`Gọi nhân viên hỗ trợ ${phone}`}
-          onPress={handleCall}
-        >
+        <View style={styles.callButton}>
           <Text style={styles.callButtonText}>Gọi ngay</Text>
-        </Pressable>
-      ) : null}
-    </AppCard>
+        </View>
+      </AppCard>
+    </TouchableOpacity>
   );
 }
 

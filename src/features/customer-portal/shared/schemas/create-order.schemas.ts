@@ -47,6 +47,8 @@ export const createOrderSchema = z
         if (!line.productLink.trim()) issue('productLink', 'Vui lòng nhập link sản phẩm');
         if (!line.website.trim()) issue('website', 'Vui lòng nhập website');
         if (parseNumberInput(line.priceWeb) < 0) issue('priceWeb', 'Giá web không hợp lệ');
+      } else if (data.orderType === 'KY_GUI') {
+        if (!line.shipmentCode.trim()) issue('shipmentCode', 'Vui lòng nhập mã vận đơn');
       }
     });
   });

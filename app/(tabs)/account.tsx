@@ -19,6 +19,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
+import { SUPPORT_STAFF_PHONE } from '@/src/shared/constants/support';
 import { getAppVersionLabel } from '@/src/shared/lib/app-version';
 import { useAuthUser, useAuthActions } from '@/src/features/auth/hooks/use-auth-store';
 import { useCustomerProfile } from '@/src/features/customer-portal/shared/hooks/use-customer-profile';
@@ -380,7 +381,7 @@ export default function AccountScreen() {
   const staffSelectOptions = staffOptions.map((staff) => ({
     value: staff.accountId,
     label: `${staff.name}${staff.staffCode ? ` (${staff.staffCode})` : ''}`,
-    description: staff.phone,
+    description: SUPPORT_STAFF_PHONE,
   }));
   const pendingDeleteAddress = profile?.addresses.find((item) => String(item.addressId) === pendingDeleteAddressId);
   const profileTasks = [
@@ -718,7 +719,7 @@ export default function AccountScreen() {
       <ModalShell visible={modal === 'support'} title="Nhân viên hỗ trợ" onClose={() => setModal(null)}>
         <View style={styles.supportCard}>
           <Text style={styles.supportName}>{profile?.dedicatedStaff?.name || 'Hỗ trợ TixiMax'}</Text>
-          <Text style={styles.supportLine}>{profile?.dedicatedStaff?.phone || 'Vui lòng liên hệ hotline TixiMax'}</Text>
+          <Text style={styles.supportLine}>{SUPPORT_STAFF_PHONE}</Text>
           <Text style={styles.supportLine}>{profile?.dedicatedStaff?.staffCode || 'Chăm sóc khách hàng'}</Text>
         </View>
       </ModalShell>

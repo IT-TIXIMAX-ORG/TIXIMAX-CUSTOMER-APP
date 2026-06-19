@@ -41,11 +41,11 @@ export function SelectSheet({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <Pressable
         style={styles.trigger}
         accessibilityRole="button"
-        accessibilityLabel={`${label}: ${selected?.label || placeholder}`}
+        accessibilityLabel={`${label || placeholder}: ${selected?.label || placeholder}`}
         onPress={() => {
           onOpen?.();
           setOpen(true);
@@ -61,7 +61,7 @@ export function SelectSheet({
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
           <View style={[styles.dialog, { maxHeight: dialogMaxHeight }]}>
             <View style={styles.dialogHeader}>
-              <Text style={styles.dialogTitle}>{label}</Text>
+              <Text style={styles.dialogTitle}>{label || placeholder}</Text>
               <Pressable
                 style={styles.close}
                 onPress={() => setOpen(false)}

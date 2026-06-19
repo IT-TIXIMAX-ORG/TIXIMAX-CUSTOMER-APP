@@ -14,9 +14,12 @@ const getStatusConfig = (status?: string | null) => {
     case 'CHO_THANH_TOAN_SHIP':
     case 'CHUA_THANH_TOAN':
     case 'WAITING_FOR_PAYMENT':
+    case 'CHUA_DU_DIEU_KIEN':
+    case 'WAIT_IMPORT':
     case 'PENDING':
       return { bg: colors.warningLight, text: colors.warning };
 
+    case 'DRAFT':
     case 'DA_XAC_NHAN':
     case 'CHO_MUA':
     case 'DA_MUA':
@@ -34,6 +37,9 @@ const getStatusConfig = (status?: string | null) => {
     case 'COMPLETED':
     case 'DA_THANH_TOAN':
     case 'DA_THANH_TOAN_SHIP':
+    case 'DU_DIEU_KIEN':
+    case 'LOCKED':
+    case 'EXPORTED':
     case 'SUCCESS':
       return { bg: colors.successLight, text: colors.successText };
 

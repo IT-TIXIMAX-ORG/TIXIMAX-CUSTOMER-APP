@@ -12,6 +12,19 @@ export const QUERY_KEYS = {
       ['customer-portal', 'transactions', page, size] as const,
     domesticDeliveries: (page: number, size: number) =>
       ['customer-portal', 'domestic-deliveries', page, size] as const,
+    warehouse: {
+      carriers: () => ['customer-portal', 'warehouse', 'carriers'] as const,
+      available: (query: unknown) =>
+        ['customer-portal', 'warehouse', 'available', query] as const,
+      drafts: (query: unknown) =>
+        ['customer-portal', 'warehouse', 'drafts', query] as const,
+    },
+    shipPayment: {
+      list: (query: unknown) =>
+        ['customer-portal', 'ship-payment', query] as const,
+      bankAccounts: () =>
+        ['customer-portal', 'ship-payment', 'banks'] as const,
+    },
   },
   auth: {
     session: () => ['auth', 'session'] as const,

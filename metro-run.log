@@ -1,0 +1,37 @@
+
+> tiximax-customer-app@1.0.0 android
+> expo start --dev-client --android --port 5173 --clear
+
+env: load .env
+env: export EXPO_PUBLIC_API_BASE_URL EXPO_PUBLIC_DEV_SERVER_PORT PORT RCT_METRO_PORT
+Starting project at D:\Tiximax_FE\tiximax-customer-app
+Logs: D:\Tiximax_FE\tiximax-customer-app\.expo\dev\logs\start.log
+Starting Metro Bundler
+
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+› Opening tiximaxcustomerapp://expo-development-client/?url=http%3A%2F%2F192.168.28.84%3A5173 on Pixel_6
+Waiting on http://localhost:5173
+An update for expo is available: 56.0.11 → ~56.0.12
+3 other packages may need updating. Run npx expo install --check for details.
+Logs for your project will appear below.
+Android Bundled 6800ms node_modules\expo-router\entry.js (2345 modules)
+
+<--- Last few GCs --->
+
+[20520:000001DD156C8000]  4160081 ms: Scavenge (interleaved) 4090.1 (4094.0) -> 4088.5 (4098.2) MB, pooled: 0 MB, 5.24 / 0.00 ms  (average mu = 0.279, current mu = 0.223) allocation failure; 
+[20520:000001DD156C8000]  4163169 ms: Mark-Compact (reduce) 4093.6 (4099.5) -> 4088.9 (4092.5) MB, pooled: 0 MB, 1966.02 / 0.00 ms  (+ 453.6 ms in 80 steps since start of marking, biggest step 34.2 ms, walltime since start of marking 2634 ms) (average mu 
+FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 00007FF6DAC0AD5F node::OnFatalError+1343
+ 2: 00007FF6DB8532D7 v8::Function::NewInstance+423
+ 3: 00007FF6DB653997 v8::base::AddressSpaceReservation::AddressSpaceReservation+322071
+ 4: 00007FF6DB6576A4 v8::base::AddressSpaceReservation::AddressSpaceReservation+337700
+ 5: 00007FF6DB66663C v8::internal::StrongRootAllocatorBase::deallocate_impl+16604
+ 6: 00007FF6DB665E7B v8::internal::StrongRootAllocatorBase::deallocate_impl+14619
+ 7: 00007FF6DCACE7ED v8::base::UnsignedDivisionByConstant<unsigned __int64>+2791357
+ 8: 00007FF6DB651460 v8::base::AddressSpaceReservation::AddressSpaceReservation+312544
+ 9: 00007FF6DB66BCEA X509_STORE_set_cleanup+5098
+10: 00007FF6DB678186 uv_timer_set_repeat+20694
+11: 00007FF6DB24B1E7 v8::String::Utf8Value::~Utf8Value+143495
+12: 000001DD4DD37750 

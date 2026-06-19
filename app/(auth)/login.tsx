@@ -34,6 +34,7 @@ import { colors, spacing, borderRadius, typography, fontFamilyForWeight } from '
 import { getAppVersionLabel } from '@/src/shared/lib/app-version';
 import type { ReferralStaffOption } from '@/src/features/customer-portal/shared/types/master-data.types';
 import { ENV_CONFIG } from '@/src/shared/constants/env.constants';
+import { SUPPORT_STAFF_PHONE } from '@/src/shared/constants/support';
 import {
   loginSchema,
   type LoginForm,
@@ -209,7 +210,7 @@ export default function LoginScreen() {
     ...registerStaffOptions.map((staff) => ({
       value: staff.accountId,
       label: `${staff.name}${staff.staffCode ? ` (${staff.staffCode})` : ''}`,
-      description: staff.phone,
+      description: SUPPORT_STAFF_PHONE,
     })),
   ];
   const registerStaffStatusText = isRegisterStaffLoading

@@ -34,7 +34,7 @@ App cho phép **tạo tài khoản ngay trong app** (`POST /customer-portal/regi
 
 | Nơi | Việc cần làm | Bắt buộc |
 |---|---|---|
-| **App** | Nút "Xóa tài khoản" trong màn Tài khoản → dialog xác nhận → gọi API → tự logout | ✅ (vì có đăng ký in-app) |
+| **App** | Nút "Xóa tài khoản" trong màn Tài khoản → dialog xác nhận → gọi API → tự logout | ✅ **ĐÃ LÀM** (verify emulator) |
 | **Web** | **Trang công khai** trên https://sys.tiximax.net/ mô tả quy trình xóa + **hotline hỗ trợ** để khách yêu cầu xóa ngoài app (URL này dán vào Data safety) | ✅ (phần "ngoài app") |
 | **Backend** | Endpoint: `DELETE /customer-portal/me/account` | ✅ (đã triển khai) |
 
@@ -61,8 +61,21 @@ Thông tin này phải xuất hiện ở: màn xác nhận trong app, trang xóa
 ## 5. Checklist trước khi submit
 
 - [x] BE: endpoint `DELETE /customer-portal/me/account` — **ĐÃ TRIỂN KHAI** (chặn nếu còn đơn đang xử lý + ẩn danh PII + giữ đơn/thanh toán theo luật + thu hồi token)
-- [ ] App: nút "Xóa tài khoản" + dialog xác nhận (báo điều kiện "mọi đơn đã giao/đã hủy"; xử lý lỗi 409 `CUSTOMER_ACCOUNT_DELETE_HAS_ACTIVE_ORDERS` → hiển thị danh sách đơn còn chặn) + tự logout
+- [x] App: nút "Xóa tài khoản" + dialog xác nhận (công bố ẩn danh PII + giữ chứng từ theo luật + điều kiện "mọi đơn đã giao/đã hủy") → gọi API → tự logout; lỗi 409 hiển thị message từ BE qua toast. **ĐÃ LÀM & verify emulator** (commit `bbbc0f2`, nhánh `J2T`). *Ghi chú: hiện chỉ hiển thị message lỗi, chưa render danh sách đơn còn chặn — có thể bổ sung sau.*
 - [ ] Web: trang công khai trên https://sys.tiximax.net/ mô tả quy trình xóa + hotline hỗ trợ (URL dán vào Data safety)
 - [x] Chốt X (ẩn danh PII ngay) và Y (giữ chứng từ theo Luật Kế toán) — xem mục 4
-- [ ] Cập nhật Privacy Policy mục "Xóa tài khoản" cho khớp (ẩn danh PII ngay + giữ chứng từ theo luật kế toán)
+- [x] Cập nhật Privacy Policy mục "Xóa tài khoản" cho khớp (ẩn danh PII ngay + giữ chứng từ theo luật kế toán) — *nội dung đã sửa ở `Document/chinh-sach-quyen-rieng-tu.md`; còn điền tên/địa chỉ pháp lý + đăng lên URL cố định*
 - [ ] Khai Data safety form + dán URL web vào Play Console
+
+---
+
+## 6. Tiến trình (cập nhật 18/06/2026)
+
+- ✅ **Backend**: endpoint `DELETE /customer-portal/me/account` đã có sẵn & rà soát code (chặn đơn đang xử lý → 409, ẩn danh PII, thu hồi token, giữ chứng từ).
+- ✅ **App (FE)**: đã code nút "Xóa tài khoản" + dialog xác nhận + tự logout + xử lý lỗi 409 — commit `bbbc0f2` trên nhánh `J2T` (đã push lên `origin/J2T`).
+  - Verify trên emulator: nút hiển thị dưới "Đăng xuất"; dialog công bố đúng nội dung; nút "Hủy" hoạt động. **Không** chạy xóa thật (đường phá hủy trên tài khoản thật).
+  - App version bump **1.0.1**; đã build **APK release** (debug-signed, ~100 MB) để test trên máy thật.
+- ⏳ **Còn lại để submit Google Play** (không thuộc app, cần web/pháp lý):
+  - [ ] **Web**: trang công khai mô tả quy trình xóa + hotline trên https://sys.tiximax.net/ (URL cho Data safety).
+  - [x] **Privacy Policy**: đã cập nhật mục "Xóa tài khoản" + "Thời gian lưu trữ" trong `Document/chinh-sach-quyen-rieng-tu.md` (khớp BE). *Còn: điền tên/địa chỉ pháp lý + đăng lên URL cố định.*
+  - [ ] **Data safety form** (Play Console): khai có hỗ trợ xóa tài khoản + dán URL web ở trên.

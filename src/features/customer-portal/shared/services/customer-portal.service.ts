@@ -11,7 +11,9 @@ import type {
   CustomerDomesticDeliveryItem,
   AllingoQuoteItem,
   AllingoBookResult,
+  SupportStaff,
 } from '../types/customer-portal.types';
+import { SUPPORT_STAFF_PHONE } from '@/src/shared/constants/support';
 
 export type CustomerActiveOrderDateField = 'created_at' | 'latest_progress_at' | 'payment_due_at';
 export type CustomerActiveOrderSortBy = 'created_at' | 'latest_progress_at' | 'progress_rank' | 'main_status_priority';
@@ -269,12 +271,15 @@ const normalizeProfile = (rawData: unknown): CustomerProfile => {
       staffId: readString((data.dedicatedStaff as any).staffId) || null,
       staffCode: readString((data.dedicatedStaff as any).staffCode) || null,
       name: readString((data.dedicatedStaff as any).name),
-      phone: readString((data.dedicatedStaff as any).phone),
+      phone: SUPPORT_STAFF_PHONE,
       avatarUrl: readString((data.dedicatedStaff as any).avatarUrl),
     } : null,
     source: readString(data.source),
   };
 };
+
+const maskSupportStaffPhone = (staff?: SupportStaff | null): SupportStaff | null =>
+  staff ? { ...staff, phone: SUPPORT_STAFF_PHONE } : null;
 
 export const getCustomerProfile = async (): Promise<CustomerProfile> => {
   const response = await httpClient.get('/customer-portal/me');
@@ -404,6 +409,8 @@ export const getCustomerOrderDetail = async (orderId: string): Promise<CustomerO
   };
   return {
     ...order,
+    staff: maskSupportStaffPhone(order.staff),
+    staffCs: maskSupportStaffPhone(order.staffCs),
     shippingEstimation: normalizeCustomerOrderShippingEstimation(order),
   };
 };

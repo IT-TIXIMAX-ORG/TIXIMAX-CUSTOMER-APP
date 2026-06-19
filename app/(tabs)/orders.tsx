@@ -13,6 +13,7 @@ import {
 import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
 import {
@@ -89,6 +90,7 @@ const isValidDateFilter = (value: string) => {
 };
 
 export default function OrdersScreen() {
+  const router = useRouter();
   const contentPaddingBottom = useTabScreenBottomPadding();
   const contentPaddingTop = useScreenContentTopPadding(spacing.base);
   const queryClient = useQueryClient();
@@ -328,8 +330,33 @@ export default function OrdersScreen() {
         segments={[
           { label: 'Đang xử lý', value: 'active' },
           { label: 'Lịch sử', value: 'history' },
+          { label: 'Giao hàng', value: 'domestic' },
         ]}
       />
+      {activeTab === 'domestic' ? (
+        <View style={styles.domesticShortcutBar}>
+          <AppButton
+            title="Xác nhận"
+            size="sm"
+            variant="outline"
+            icon={<Feather name="check-square" size={14} color={colors.primary} />}
+            onPress={() => router.push('/warehouse/confirm' as any)}
+          />
+          <AppButton
+            title="Địa chỉ giao"
+            size="sm"
+            variant="outline"
+            icon={<Feather name="map-pin" size={14} color={colors.primary} />}
+            onPress={() => router.push('/warehouse/addresses' as any)}
+          />
+          <AppButton
+            title="Thanh toán ship"
+            size="sm"
+            icon={<Feather name="credit-card" size={14} color={colors.black} />}
+            onPress={() => router.push('/shipping-payments' as any)}
+          />
+        </View>
+      ) : null}
       {activeTab !== 'domestic' ? (
         <View style={styles.filterBar}>
           <Pressable style={styles.searchBox} onPress={openFilter}>
@@ -690,6 +717,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: spacing.md,
+  },
+  domesticShortcutBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   quoteCard: {
     flexDirection: 'row',

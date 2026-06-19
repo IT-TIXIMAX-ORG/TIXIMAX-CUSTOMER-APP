@@ -10,7 +10,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "TixiMax cần quyền truy cập thư viện ảnh để bạn tải ảnh sản phẩm khi tạo đơn."
+        "NSPhotoLibraryUsageDescription": "TixiMax cần quyền truy cập thư viện ảnh để bạn tải ảnh sản phẩm khi tạo đơn và lưu mã QR thanh toán.",
+        "NSPhotoLibraryAddUsageDescription": "TixiMax cần quyền lưu ảnh để lưu mã QR thanh toán vào thư viện ảnh của bạn."
       },
       "bundleIdentifier": "com.anonymous.tiximaxcustomerapp"
     },
@@ -36,6 +37,17 @@
           "image": "./assets/images/splash-logo.png",
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "TixiMax cần quyền truy cập thư viện ảnh để lưu mã QR thanh toán.",
+          "savePhotosPermission": "TixiMax cần quyền lưu ảnh để lưu mã QR thanh toán vào thư viện ảnh của bạn.",
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": [
+            "photo"
+          ]
         }
       ],
       "expo-font"
