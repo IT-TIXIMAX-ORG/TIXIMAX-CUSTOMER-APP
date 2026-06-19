@@ -69,13 +69,22 @@ Thông tin này phải xuất hiện ở: màn xác nhận trong app, trang xóa
 
 ---
 
-## 6. Tiến trình (cập nhật 18/06/2026)
+## 6. Tiến trình (cập nhật 19/06/2026)
 
 - ✅ **Backend**: endpoint `DELETE /customer-portal/me/account` đã có sẵn & rà soát code (chặn đơn đang xử lý → 409, ẩn danh PII, thu hồi token, giữ chứng từ).
 - ✅ **App (FE)**: đã code nút "Xóa tài khoản" + dialog xác nhận + tự logout + xử lý lỗi 409 — commit `bbbc0f2` trên nhánh `J2T` (đã push lên `origin/J2T`).
   - Verify trên emulator: nút hiển thị dưới "Đăng xuất"; dialog công bố đúng nội dung; nút "Hủy" hoạt động. **Không** chạy xóa thật (đường phá hủy trên tài khoản thật).
-  - App version bump **1.0.1**; đã build **APK release** (debug-signed, ~100 MB) để test trên máy thật.
+  - App version **1.0.2** (tính đến  19/06/2026); commit mới nhất `084ce5c`.
+- ✅ **Privacy Policy** (`Document/chinh-sach-quyen-rieng-tu.md`): đã cập nhật đầy đủ — mục "Xóa tài khoản", "Thời gian lưu trữ", quyền thiết bị (lưu QR), liên hệ hỗ trợ Zalo/điện thoại. *Còn: điền tên/địa chỉ pháp lý + đăng lên URL cố định.*
 - ⏳ **Còn lại để submit Google Play** (không thuộc app, cần web/pháp lý):
   - [ ] **Web**: trang công khai mô tả quy trình xóa + hotline trên https://sys.tiximax.net/ (URL cho Data safety).
-  - [x] **Privacy Policy**: đã cập nhật mục "Xóa tài khoản" + "Thời gian lưu trữ" trong `Document/chinh-sach-quyen-rieng-tu.md` (khớp BE). *Còn: điền tên/địa chỉ pháp lý + đăng lên URL cố định.*
   - [ ] **Data safety form** (Play Console): khai có hỗ trợ xóa tài khoản + dán URL web ở trên.
+
+### Tính năng mới từ v1.0.1 → v1.0.2 (19/06/2026)
+
+- **Kho VN & phiếu giao** (`app/warehouse/confirm.tsx`, `app/warehouse/addresses.tsx`): xem kiện về kho VN → xác nhận + gán địa chỉ giao → tạo phiếu giao nội địa; quản lý phiếu (sửa địa chỉ/SĐT/carrier, thêm/bớt kiện, xoá phiếu).
+- **Thanh toán phí ship** (`app/shipping-payments/index.tsx`): danh sách mã ship + cước, thanh toán bằng ví/QR, áp dụng voucher, auto-poll trạng thái khi QR quét xong.
+- **Liên hệ hỗ trợ** (`SupportContactDialog`): mở app điện thoại / Zalo trực tiếp từ dashboard.
+- **Ký gửi hàng hóa** (tạo đơn): đã mở hoàn toàn — chọn loại đơn "Ký gửi" → vào form tạo đơn bình thường (không còn popup "Sắp ra mắt").
+- **Date picker** cho lọc đơn hàng & giao dịch theo khoảng ngày.
+- **Filter "Chờ thanh toán"** gộp cả `CHO_THANH_TOAN` + `CHO_THANH_TOAN_SHIP`.
