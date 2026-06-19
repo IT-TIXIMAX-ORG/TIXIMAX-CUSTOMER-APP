@@ -1,16 +1,17 @@
 import Constants from 'expo-constants';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 
 const FALLBACK_VERSION = '1.0.0';
 
-// Đọc versionName thật từ app đã cài (vd "1.0.0"). Dùng require động + try/catch vì dev build
-// cũ có thể chưa link native module ExpoApplication → khi đó fallback về version trong app config.
+type ExpoApplicationModule = {
+  nativeApplicationVersion?: string | null;
+};
+
+// Đọc versionName thật từ app đã cài (vd "1.0.0"). Dùng optional native module vì dev build
+// cũ có thể chưa link ExpoApplication; import package trực tiếp sẽ crash trước khi fallback.
 const readNativeAppVersion = (): string | null => {
-  try {
-    const Application = require('expo-application') as typeof import('expo-application');
-    return Application.nativeApplicationVersion ?? null;
-  } catch {
-    return null;
-  }
+  const Application = requireOptionalNativeModule<ExpoApplicationModule>('ExpoApplication');
+  return Application?.nativeApplicationVersion ?? null;
 };
 
 // Chuỗi hiển thị version ở footer (màn đăng nhập + tài khoản), ví dụ: "Phiên bản 1.0.0".

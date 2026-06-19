@@ -24,6 +24,7 @@ import { ENV_CONFIG } from '@/src/shared/constants/env.constants';
 import { useCustomerOrderDetail } from '@/src/features/customer-portal/shared/hooks/use-customer-portal-data';
 import { getRoutes } from '@/src/features/customer-portal/shared/services/master-data.service';
 import { StatusBadge } from '@/src/components/ui/StatusBadge';
+import { PaymentSessionCard as SharedPaymentSessionCard } from '@/src/components/payment/PaymentSessionCard';
 import { formatCurrency, formatDate, formatWeight } from '@/src/shared/lib/utils';
 import { AppCard } from '@/src/components/ui/AppCard';
 import { EmptyState } from '@/src/components/ui/EmptyState';
@@ -34,7 +35,7 @@ import {
   orderTypeLabel,
   transactionPurposeLabel,
 } from '@/src/shared/lib/labels';
-import type { CustomerOrderDetail, CustomerOrderLink, CustomerPaymentSession, SupportStaff } from '@/src/features/customer-portal/shared/types/customer-portal.types';
+import type { CustomerOrderDetail, CustomerOrderLink, CustomerPaymentSession } from '@/src/features/customer-portal/shared/types/customer-portal.types';
 
 const normalizeImageUrl = (value?: string | null) => {
   const url = value?.trim();
@@ -327,8 +328,6 @@ export default function OrderDetailScreen() {
   // Hành trình: mặc định 2 bước mới nhất, có nút mở rộng.
   const reversedLogs = [...(order.processLogs ?? [])].reverse();
   const visibleLogs = timelineExpanded || reversedLogs.length <= 2 ? reversedLogs : reversedLogs.slice(0, 2);
-  const staff: SupportStaff | null = order.staff ?? order.staffCs ?? null;
-
   return (
     <>
       <ScrollView
@@ -336,7 +335,6 @@ export default function OrderDetailScreen() {
         contentContainerStyle={[
           styles.content,
           { paddingTop: contentPaddingTop },
-          staff ? { paddingBottom: 96 } : null,
         ]}
         refreshControl={
           Platform.OS !== 'web' ? (
@@ -432,7 +430,7 @@ export default function OrderDetailScreen() {
 
           {payablePendingSessions.length ? (
             payablePendingSessions.map((session, index) => (
-              <PaymentSessionCard key={sessionKey(session, index)} session={session} onViewImage={openImage} isPending />
+              <SharedPaymentSessionCard key={sessionKey(session, index)} session={session} onViewImage={openImage} isPending />
             ))
           ) : !isCancelled && !hasShippingSessions && !settledProductSessions.length ? (
             <Text style={styles.mutedText}>Không có khoản cần thanh toán.</Text>
@@ -477,7 +475,7 @@ export default function OrderDetailScreen() {
                     {productModuleExpanded ? (
                       <View style={styles.productModuleContent}>
                         {settledProductSessions.map((session, index) => (
-                          <PaymentSessionCard
+                          <SharedPaymentSessionCard
                             key={sessionKey(session, index)}
                             session={session}
                             onViewImage={openImage}
@@ -523,7 +521,7 @@ export default function OrderDetailScreen() {
               {shippingGroupExpanded ? (
                 <View style={styles.settledGroupContent}>
                   {shippingSessions.map((session, index) => (
-                    <PaymentSessionCard
+                    <SharedPaymentSessionCard
                       key={sessionKey(session, index)}
                       session={session}
                       onViewImage={openImage}
@@ -693,8 +691,6 @@ export default function OrderDetailScreen() {
         </Section>
       </ScrollView>
 
-      {staff ? <StaffBar staff={staff} /> : null}
-
       <Modal visible={Boolean(selectedImageUrl)} transparent animationType="fade" onRequestClose={closeImage}>
         <View style={styles.imageViewer}>
           <Pressable
@@ -829,34 +825,6 @@ function PaymentBreakdownCard({
   );
 }
 
-function StaffBar({ staff }: { staff: SupportStaff }) {
-  return (
-    <View style={styles.staffBar}>
-      <View style={styles.staffInfo}>
-        <View style={styles.staffAvatar}>
-          <Feather name="user" size={18} color={colors.primaryDark} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.staffRole}>Nhân viên hỗ trợ</Text>
-          <Text style={styles.staffName} numberOfLines={1}>
-            {staff.name}{staff.phone ? ` · ${staff.phone}` : ''}
-          </Text>
-        </View>
-      </View>
-      {staff.phone ? (
-        <Pressable
-          style={styles.staffCallBtn}
-          accessibilityRole="button"
-          accessibilityLabel={`Gọi nhân viên hỗ trợ ${staff.phone}`}
-          onPress={() => void Linking.openURL(`tel:${staff.phone}`)}
-        >
-          <Text style={styles.staffCallBtnText}>Liên hệ ngay</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
 function Section({
   title,
   icon,
@@ -912,160 +880,6 @@ function BdRow({ label, value, valueColor }: { label: string; value: string; val
       <Text style={styles.bdLabel}>{label}</Text>
       <Text style={[styles.bdValue, valueColor ? { color: valueColor } : null]} numberOfLines={3}>{value}</Text>
     </View>
-  );
-}
-
-function PaymentSessionCard({
-  session,
-  onViewImage,
-  isPending = false,
-  showHeader = true,
-  embedded = false,
-}: {
-  session: CustomerPaymentSession;
-  onViewImage: (url: string) => void;
-  isPending?: boolean;
-  showHeader?: boolean;
-  embedded?: boolean;
-}) {
-  const purposeLabel = isShippingPaymentSession(session)
-    ? 'Thanh toán vận chuyển'
-    : transactionPurposeLabel(session.purpose || session.paymentType);
-
-  // QR: skeleton trong lúc tải (chống layout shift) + ẩn hẳn nếu ảnh lỗi (không hiện icon vỡ).
-  const [qrLoading, setQrLoading] = useState(true);
-  const [qrError, setQrError] = useState(false);
-  const showQr = Boolean(session.qrCode) && !qrError;
-
-  return (
-    <AppCard style={[styles.qrCard, embedded && styles.qrCardEmbedded]}>
-      {showHeader ? (
-        <View style={styles.qrHeader}>
-          <Text style={styles.qrTitle}>{purposeLabel}</Text>
-          <View style={styles.qrStatusWrap}>
-            <StatusBadge status={session.status} />
-          </View>
-        </View>
-      ) : null}
-
-      {/* Gray content box — mirrors the HTML mockup's bg-slate-50 container */}
-      <View style={styles.paymentContentBox}>
-        {/* Payment code row — tap to copy */}
-        {session.paymentCode ? (
-          <Pressable
-            style={styles.paymentInfoRow}
-            accessibilityRole="button"
-            accessibilityLabel="Sao chép mã thanh toán"
-            onPress={async () => {
-              await Clipboard.setStringAsync(session.paymentCode || '');
-              Toast.show({ type: 'success', text1: 'Đã copy mã thanh toán' });
-            }}
-          >
-            <Text style={styles.paymentInfoLabel}>Mã thanh toán:</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={styles.paymentInfoValue}>{session.paymentCode}</Text>
-              <Feather name="copy" size={11} color={colors.primaryDark} />
-            </View>
-          </Pressable>
-        ) : null}
-
-        {/* Amount row — tap to copy số tiền (số thuần, dán thẳng vào app ngân hàng) */}
-        {session.amount != null ? (
-          <Pressable
-            style={styles.paymentInfoRow}
-            accessibilityRole="button"
-            accessibilityLabel="Sao chép số tiền chuyển khoản"
-            onPress={async () => {
-              await Clipboard.setStringAsync(String(session.amount));
-              Toast.show({ type: 'success', text1: 'Đã copy số tiền' });
-            }}
-          >
-            <Text style={styles.paymentInfoLabel}>Số tiền chuyển khoản:</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={styles.paymentInfoValueBold}>{formatCurrency(session.amount)}</Text>
-              <Feather name="copy" size={11} color={colors.primaryDark} />
-            </View>
-          </Pressable>
-        ) : null}
-
-        {/* QR Code — skeleton trong lúc tải, ẩn hẳn nếu ảnh lỗi; viền cam nếu đang chờ */}
-        {showQr ? (
-          <View style={[styles.qrCenterBox, isPending && styles.qrCenterBoxActive]}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Phóng to mã QR thanh toán"
-              onPress={() => onViewImage(session.qrCode!)}
-            >
-              <View style={styles.qrImageSquare}>
-                <Image
-                  source={{ uri: session.qrCode! }}
-                  style={styles.qrImageFill}
-                  resizeMode="contain"
-                  onLoadStart={() => setQrLoading(true)}
-                  onLoadEnd={() => setQrLoading(false)}
-                  onError={() => {
-                    setQrLoading(false);
-                    setQrError(true);
-                  }}
-                />
-                {qrLoading ? (
-                  <View style={styles.qrSkeleton}>
-                    <ActivityIndicator color={colors.primary} />
-                  </View>
-                ) : null}
-              </View>
-            </Pressable>
-            <Text style={styles.qrCenterHint}>
-              {isPending ? 'Nhấn để phóng to · Quét để thanh toán' : 'Nhấn để phóng to'}
-            </Text>
-          </View>
-        ) : null}
-
-        {/* Action buttons: Xem QR + Sao chép CK */}
-        {(showQr || session.content) ? (
-          <View style={styles.qrBtnRow}>
-            {showQr ? (
-              <Pressable
-                style={styles.qrBtnPrimary}
-                accessibilityRole="button"
-                accessibilityLabel="Xem mã QR"
-                onPress={() => onViewImage(session.qrCode!)}
-              >
-                <Feather name="maximize-2" size={13} color={colors.black} />
-                <Text style={styles.qrBtnText}>Xem QR</Text>
-              </Pressable>
-            ) : null}
-            {session.content ? (
-              <Pressable
-                style={styles.qrBtnSecondary}
-                accessibilityRole="button"
-                accessibilityLabel="Sao chép nội dung chuyển khoản"
-                onPress={async () => {
-                  await Clipboard.setStringAsync(session.content || '');
-                  Toast.show({ type: 'success', text1: 'Đã copy nội dung chuyển khoản' });
-                }}
-              >
-                <Feather name="copy" size={13} color={colors.textPrimary} />
-                <Text style={styles.qrBtnTextSecondary}>Sao chép CK</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
-      </View>
-
-      {/* Bank info — outside the gray box */}
-      {session.bankAccount ? (
-        <View style={styles.bankBox}>
-          <InfoRow label="Ngân hàng" value={session.bankAccount.bankName} />
-          <CopyableInfoRow
-            label="Số tài khoản"
-            value={session.bankAccount.accountNumber}
-            toastText="Đã copy số tài khoản"
-          />
-          <InfoRow label="Chủ tài khoản" value={session.bankAccount.accountHolder} />
-        </View>
-      ) : null}
-    </AppCard>
   );
 }
 
@@ -1683,74 +1497,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilyForWeight('900'),
     color: colors.primaryDark,
   },
-  staffBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  staffInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  staffAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.primaryBorder,
-  },
-  staffRole: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: '700',
-    fontFamily: fontFamilyForWeight('700'),
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-  },
-  staffName: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.textPrimary,
-  },
-  staffCallBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    minHeight: 44,
-    justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  staffCallBtnText: {
-    color: colors.black,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    fontSize: typography.fontSize.sm,
-  },
   paymentContentBox: {
     backgroundColor: '#F8FAFC',
     borderRadius: borderRadius.md,
@@ -1980,3 +1726,4 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilyForWeight('700'),
   },
 });
+

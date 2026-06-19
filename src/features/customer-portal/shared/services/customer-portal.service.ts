@@ -11,7 +11,9 @@ import type {
   CustomerDomesticDeliveryItem,
   AllingoQuoteItem,
   AllingoBookResult,
+  SupportStaff,
 } from '../types/customer-portal.types';
+import { SUPPORT_STAFF_PHONE } from '@/src/shared/constants/support';
 
 export type CustomerActiveOrderDateField = 'created_at' | 'latest_progress_at' | 'payment_due_at';
 export type CustomerActiveOrderSortBy = 'created_at' | 'latest_progress_at' | 'progress_rank' | 'main_status_priority';
@@ -269,12 +271,15 @@ const normalizeProfile = (rawData: unknown): CustomerProfile => {
       staffId: readString((data.dedicatedStaff as any).staffId) || null,
       staffCode: readString((data.dedicatedStaff as any).staffCode) || null,
       name: readString((data.dedicatedStaff as any).name),
-      phone: readString((data.dedicatedStaff as any).phone),
+      phone: SUPPORT_STAFF_PHONE,
       avatarUrl: readString((data.dedicatedStaff as any).avatarUrl),
     } : null,
     source: readString(data.source),
   };
 };
+
+const maskSupportStaffPhone = (staff?: SupportStaff | null): SupportStaff | null =>
+  staff ? { ...staff, phone: SUPPORT_STAFF_PHONE } : null;
 
 export const getCustomerProfile = async (): Promise<CustomerProfile> => {
   const response = await httpClient.get('/customer-portal/me');
@@ -404,6 +409,8 @@ export const getCustomerOrderDetail = async (orderId: string): Promise<CustomerO
   };
   return {
     ...order,
+    staff: maskSupportStaffPhone(order.staff),
+    staffCs: maskSupportStaffPhone(order.staffCs),
     shippingEstimation: normalizeCustomerOrderShippingEstimation(order),
   };
 };
@@ -509,6 +516,12 @@ export const updateCustomerAddress = async (addressId: string, payload: Customer
 
 export const deleteCustomerAddress = async (addressId: string): Promise<void> => {
   await httpClient.delete(`/customer-portal/me/address/${addressId}`);
+};
+
+// Xóa tài khoản: BE vô hiệu hóa + ẩn danh PII, giữ chứng từ đơn/thanh toán theo luật kế toán.
+// BE chặn (HTTP 409) nếu còn đơn chưa ở trạng thái DA_GIAO/DA_HUY → message đọc ở error.response.data.message.
+export const deleteCustomerAccount = async (): Promise<void> => {
+  await httpClient.delete('/customer-portal/me/account');
 };
 
 export const requestPhoneOtp = async (phone: string): Promise<void> => {

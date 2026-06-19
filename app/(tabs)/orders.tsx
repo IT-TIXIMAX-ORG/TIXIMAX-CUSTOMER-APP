@@ -13,6 +13,7 @@ import {
 import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
 import {
@@ -40,6 +41,7 @@ import { ActiveOrderCard } from '@/src/components/dashboard/ActiveOrderCard';
 import { OrderListItem } from '@/src/components/orders/OrderListItem';
 import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
+import { DatePickerField } from '@/src/components/ui/DatePickerField';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorState } from '@/src/components/ui/ErrorState';
 import { ModalShell } from '@/src/components/ui/ModalShell';
@@ -69,6 +71,17 @@ const MAIN_STATUS_OPTIONS = [
   { label: 'Chờ giao', value: 'CHO_GIAO' },
 ];
 
+// Filter "Chờ thanh toán" gộp cả CHO_THANH_TOAN (tiền hàng) lẫn CHO_THANH_TOAN_SHIP (vận chuyển)
+// — với khách đây là cùng một việc "cần thanh toán". Chỉ áp cho tab Đang xử lý (active orders nhận
+// mảng order_main_status_in); tab Lịch sử chỉ chứa đơn đã giao/đã hủy nên không có đơn chờ thanh toán.
+const PAYMENT_PENDING_STATUSES = ['CHO_THANH_TOAN', 'CHO_THANH_TOAN_SHIP'];
+
+const toActiveStatusIn = (status: string): string[] => {
+  if (!status) return [];
+  if (status === 'CHO_THANH_TOAN') return PAYMENT_PENDING_STATUSES;
+  return [status];
+};
+
 const isValidDateFilter = (value: string) => {
   if (!value) return true;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -77,6 +90,7 @@ const isValidDateFilter = (value: string) => {
 };
 
 export default function OrdersScreen() {
+  const router = useRouter();
   const contentPaddingBottom = useTabScreenBottomPadding();
   const contentPaddingTop = useScreenContentTopPadding(spacing.base);
   const queryClient = useQueryClient();
@@ -108,7 +122,7 @@ export default function OrdersScreen() {
     () => ({
       keyword: keyword || undefined,
       type: orderType || undefined,
-      orderMainStatusIn: status ? [status] : [],
+      orderMainStatusIn: toActiveStatusIn(status),
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
       sortBy: 'latest_progress_at',
@@ -316,8 +330,33 @@ export default function OrdersScreen() {
         segments={[
           { label: 'Đang xử lý', value: 'active' },
           { label: 'Lịch sử', value: 'history' },
+          { label: 'Giao hàng', value: 'domestic' },
         ]}
       />
+      {activeTab === 'domestic' ? (
+        <View style={styles.domesticShortcutBar}>
+          <AppButton
+            title="Xác nhận"
+            size="sm"
+            variant="outline"
+            icon={<Feather name="check-square" size={14} color={colors.primary} />}
+            onPress={() => router.push('/warehouse/confirm' as any)}
+          />
+          <AppButton
+            title="Địa chỉ giao"
+            size="sm"
+            variant="outline"
+            icon={<Feather name="map-pin" size={14} color={colors.primary} />}
+            onPress={() => router.push('/warehouse/addresses' as any)}
+          />
+          <AppButton
+            title="Thanh toán ship"
+            size="sm"
+            icon={<Feather name="credit-card" size={14} color={colors.black} />}
+            onPress={() => router.push('/shipping-payments' as any)}
+          />
+        </View>
+      ) : null}
       {activeTab !== 'domestic' ? (
         <View style={styles.filterBar}>
           <Pressable style={styles.searchBox} onPress={openFilter}>
@@ -438,10 +477,22 @@ export default function OrdersScreen() {
         <SelectSheet label="Trạng thái" value={draftStatus} options={MAIN_STATUS_OPTIONS} onChange={setDraftStatus} />
         <View style={styles.dateRow}>
           <View style={styles.dateCol}>
-            <AppInput label="Từ ngày" placeholder="YYYY-MM-DD" value={draftDateFrom} onChangeText={setDraftDateFrom} />
+            <DatePickerField
+              label="Từ ngày"
+              value={draftDateFrom}
+              onChange={setDraftDateFrom}
+              maxDate={draftDateTo || undefined}
+              disableFuture
+            />
           </View>
           <View style={styles.dateCol}>
-            <AppInput label="Đến ngày" placeholder="YYYY-MM-DD" value={draftDateTo} onChangeText={setDraftDateTo} />
+            <DatePickerField
+              label="Đến ngày"
+              value={draftDateTo}
+              onChange={setDraftDateTo}
+              minDate={draftDateFrom || undefined}
+              disableFuture
+            />
           </View>
         </View>
         <View style={styles.modalActions}>
@@ -666,6 +717,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: spacing.md,
+  },
+  domesticShortcutBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   quoteCard: {
     flexDirection: 'row',

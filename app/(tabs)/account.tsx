@@ -19,11 +19,13 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { colors, typography, spacing, borderRadius, fontFamilyForWeight } from '@/src/theme/tokens';
+import { SUPPORT_STAFF_PHONE } from '@/src/shared/constants/support';
 import { getAppVersionLabel } from '@/src/shared/lib/app-version';
 import { useAuthUser, useAuthActions } from '@/src/features/auth/hooks/use-auth-store';
 import { useCustomerProfile } from '@/src/features/customer-portal/shared/hooks/use-customer-profile';
 import {
   addCustomerAddress,
+  deleteCustomerAccount,
   deleteCustomerAddress,
   // TODO(phone-otp): tạm tắt xác minh SĐT — chưa có API SMS OTP. Bật lại khi có API (#1375).
   // requestPhoneOtp,
@@ -39,6 +41,7 @@ import { AppButton } from '@/src/components/ui/AppButton';
 import { ModalShell } from '@/src/components/ui/ModalShell';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { FormInput } from '@/src/components/form/FormInput';
+import { ProvinceWardPicker } from '@/src/components/address/ProvinceWardPicker';
 import { MenuItem } from '@/src/components/account/MenuItem';
 import { MenuSection } from '@/src/components/account/MenuSection';
 import { ProfileHeader } from '@/src/components/account/ProfileHeader';
@@ -74,6 +77,8 @@ export default function AccountScreen() {
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [staffOptions, setStaffOptions] = useState<ReferralStaffOption[]>([]);
   const [addressId, setAddressId] = useState('');
   const [isAddressEditorVisible, setIsAddressEditorVisible] = useState(false);
@@ -182,6 +187,31 @@ export default function AccountScreen() {
     } catch {
       Toast.show({ type: 'error', text1: 'Không thể đăng xuất. Vui lòng thử lại.' });
       setIsLoggingOut(false);
+    }
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (isDeleting) return;
+
+    try {
+      setIsDeleting(true);
+      await deleteCustomerAccount();
+      setIsDeleteConfirmVisible(false);
+      // Account đã bị khóa + token thu hồi ở BE → xóa session local rồi về Login ngay.
+      // KHÔNG refetch profile để tránh interceptor bắn 401/403 → toast "phiên hết hạn" gây nhiễu.
+      await logout();
+      router.replace('/(auth)/login');
+      setTimeout(() => {
+        Toast.show({ type: 'success', text1: 'Tài khoản đã được xóa' });
+      }, 0);
+    } catch (error: any) {
+      // 409 (còn đơn đang xử lý) không phải 401/403 nên không bị interceptor refresh → vào thẳng đây.
+      Toast.show({
+        type: 'error',
+        text1: error?.response?.data?.message || error?.message || 'Không thể xóa tài khoản',
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -351,7 +381,7 @@ export default function AccountScreen() {
   const staffSelectOptions = staffOptions.map((staff) => ({
     value: staff.accountId,
     label: `${staff.name}${staff.staffCode ? ` (${staff.staffCode})` : ''}`,
-    description: staff.phone,
+    description: SUPPORT_STAFF_PHONE,
   }));
   const pendingDeleteAddress = profile?.addresses.find((item) => String(item.addressId) === pendingDeleteAddressId);
   const profileTasks = [
@@ -391,6 +421,18 @@ export default function AccountScreen() {
   const completedTaskCount = profileTasks.filter((task) => task.completed).length;
   const nextTask = profileTasks.find((task) => !task.completed);
   const showProgressCard = currentLevel < 3;
+
+  // Địa chỉ dùng picker liên cấp Tỉnh → Phường/Xã (đơn vị hành chính mới sau sáp nhập).
+  const watchedProvince = addressForm.watch('province');
+  const watchedWard = addressForm.watch('ward');
+  const handleSelectProvince = (province: string) => {
+    addressForm.setValue('province', province, { shouldValidate: true, shouldDirty: true });
+    // Đổi tỉnh thì xóa phường/xã cũ (không còn thuộc tỉnh mới).
+    addressForm.setValue('ward', '', { shouldValidate: true, shouldDirty: true });
+  };
+  const handleSelectWard = (ward: string) => {
+    addressForm.setValue('ward', ward, { shouldValidate: true, shouldDirty: true });
+  };
 
   return (
     <ScrollView
@@ -441,6 +483,13 @@ export default function AccountScreen() {
           variant="danger"
           onPress={handleLogoutNow}
           disabled={isLoggingOut}
+        />
+        <MenuItem
+          title="Xóa tài khoản"
+          icon="trash-2"
+          variant="danger"
+          onPress={() => setIsDeleteConfirmVisible(true)}
+          disabled={isDeleting}
           isLast
         />
       </MenuSection>
@@ -538,8 +587,12 @@ export default function AccountScreen() {
         title={addressId ? 'Chỉnh sửa địa chỉ' : 'Tạo địa chỉ'}
         onClose={closeAddressEditor}
       >
-        <FormInput control={addressForm.control} name="province" label="Tỉnh/Thành phố" />
-        <FormInput control={addressForm.control} name="ward" label="Phường/Xã" />
+        <ProvinceWardPicker
+          provinceName={watchedProvince}
+          wardName={watchedWard}
+          onChangeProvince={handleSelectProvince}
+          onChangeWard={handleSelectWard}
+        />
         <FormInput control={addressForm.control} name="street" label="Số nhà, đường" />
         <View style={styles.rowActions}>
           <AppButton title="Đóng" variant="outline" onPress={closeAddressEditor} style={{ flex: 1 }} />
@@ -666,7 +719,7 @@ export default function AccountScreen() {
       <ModalShell visible={modal === 'support'} title="Nhân viên hỗ trợ" onClose={() => setModal(null)}>
         <View style={styles.supportCard}>
           <Text style={styles.supportName}>{profile?.dedicatedStaff?.name || 'Hỗ trợ TixiMax'}</Text>
-          <Text style={styles.supportLine}>{profile?.dedicatedStaff?.phone || 'Vui lòng liên hệ hotline TixiMax'}</Text>
+          <Text style={styles.supportLine}>{SUPPORT_STAFF_PHONE}</Text>
           <Text style={styles.supportLine}>{profile?.dedicatedStaff?.staffCode || 'Chăm sóc khách hàng'}</Text>
         </View>
       </ModalShell>
@@ -682,6 +735,38 @@ export default function AccountScreen() {
               <View style={styles.confirmActions}>
                 <AppButton title="Hủy" variant="outline" onPress={cancelRemoveAddress} style={{ flex: 1 }} />
                 <AppButton title="Xóa địa chỉ" variant="danger" onPress={confirmRemoveAddress} isLoading={loading} style={{ flex: 1 }} />
+              </View>
+            </View>
+            <Toast />
+          </View>
+        </Modal>
+      ) : null}
+      {isDeleteConfirmVisible ? (
+        <Modal transparent animationType="fade" onRequestClose={() => setIsDeleteConfirmVisible(false)}>
+          <View style={styles.confirmBackdrop}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsDeleteConfirmVisible(false)} />
+            <View style={styles.confirmDialog}>
+              <Text style={styles.confirmTitle}>Xóa tài khoản?</Text>
+              <Text style={styles.confirmText}>
+                Thao tác này sẽ vô hiệu hóa tài khoản và ẩn danh toàn bộ thông tin cá nhân của bạn (tên, email, số điện thoại, địa chỉ) — không thể hoàn tác. Dữ liệu đơn hàng và thanh toán được giữ lại theo quy định pháp luật kế toán.
+                {'\n\n'}
+                Lưu ý: chỉ xóa được khi tất cả đơn hàng đã ở trạng thái Đã giao hoặc Đã hủy.
+              </Text>
+              <View style={styles.confirmActions}>
+                <AppButton
+                  title="Hủy"
+                  variant="outline"
+                  onPress={() => setIsDeleteConfirmVisible(false)}
+                  disabled={isDeleting}
+                  style={{ flex: 1 }}
+                />
+                <AppButton
+                  title="Xóa tài khoản"
+                  variant="danger"
+                  onPress={confirmDeleteAccount}
+                  isLoading={isDeleting}
+                  style={{ flex: 1 }}
+                />
               </View>
             </View>
             <Toast />

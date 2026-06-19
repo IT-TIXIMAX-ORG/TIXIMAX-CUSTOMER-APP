@@ -1,6 +1,7 @@
 import { authHttpClient, httpClient } from '@/src/shared/lib/http/http-client';
 import type { ReferralStaffOption } from '@/src/features/customer-portal/shared/types/master-data.types';
 import { ENV_CONFIG } from '@/src/shared/constants/env.constants';
+import { SUPPORT_STAFF_PHONE } from '@/src/shared/constants/support';
 
 const toRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
@@ -33,7 +34,7 @@ const parseReferralStaff = (value: unknown): ReferralStaffOption[] =>
         accountId: String(staff.accountId ?? staff.id ?? ''),
         name: String(staff.name ?? staff.fullName ?? ''),
         staffCode: staff.staffCode ? String(staff.staffCode) : undefined,
-        phone: staff.phone ? String(staff.phone) : undefined,
+        phone: SUPPORT_STAFF_PHONE,
       };
     })
     .filter((staff) => staff.accountId && staff.name);

@@ -13,7 +13,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/geist';
 import { PaperProvider } from 'react-native-paper';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
 import { ActivityIndicator, Text, TextInput, View } from 'react-native';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -21,17 +21,8 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { paperTheme } from '@/src/theme/paper-theme';
 import { useAuthStore } from '@/src/features/auth/stores/auth.store';
+import { queryClient } from '@/src/shared/lib/query/query-client';
 import { colors, typography, fontFamilyForWeight } from '@/src/theme/tokens';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 2 * 60 * 1000,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 let isDefaultFontConfigured = false;
 
@@ -87,6 +78,48 @@ function AppContent() {
           options={{
             headerShown: true,
             title: 'Chi tiết đơn hàng',
+            headerStyle: { backgroundColor: colors.surface },
+            headerTintColor: colors.textPrimary,
+            headerTitleStyle: {
+              fontWeight: '800',
+              fontFamily: fontFamilyForWeight('800'),
+              fontSize: 16,
+            },
+          }}
+        />
+        <Stack.Screen
+          name="warehouse/confirm"
+          options={{
+            headerShown: true,
+            title: 'Xác nhận nhận hàng',
+            headerStyle: { backgroundColor: colors.surface },
+            headerTintColor: colors.textPrimary,
+            headerTitleStyle: {
+              fontWeight: '800',
+              fontFamily: fontFamilyForWeight('800'),
+              fontSize: 16,
+            },
+          }}
+        />
+        <Stack.Screen
+          name="warehouse/addresses"
+          options={{
+            headerShown: true,
+            title: 'Địa chỉ giao',
+            headerStyle: { backgroundColor: colors.surface },
+            headerTintColor: colors.textPrimary,
+            headerTitleStyle: {
+              fontWeight: '800',
+              fontFamily: fontFamilyForWeight('800'),
+              fontSize: 16,
+            },
+          }}
+        />
+        <Stack.Screen
+          name="shipping-payments/index"
+          options={{
+            headerShown: true,
+            title: 'Thanh toán ship',
             headerStyle: { backgroundColor: colors.surface },
             headerTintColor: colors.textPrimary,
             headerTitleStyle: {

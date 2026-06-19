@@ -106,6 +106,18 @@ export const statusLabel = (status?: string | null) => {
       return 'Chờ thanh toán vận chuyển';
     case 'DA_THANH_TOAN_SHIP':
       return 'Đã thanh toán vận chuyển';
+    case 'DRAFT':
+      return 'Phiếu nháp';
+    case 'WAIT_IMPORT':
+      return 'Chờ nhập kho';
+    case 'LOCKED':
+      return 'Đã khóa';
+    case 'EXPORTED':
+      return 'Đã xuất kho';
+    case 'CHUA_DU_DIEU_KIEN':
+      return 'Chưa đủ điều kiện';
+    case 'DU_DIEU_KIEN':
+      return 'Đủ điều kiện';
     case 'CHO_GIAO':
       return 'Chờ giao';
     case 'DANG_GIAO':

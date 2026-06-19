@@ -12,7 +12,6 @@ import {
 import Toast from 'react-native-toast-message';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
 import { useQueryClient } from '@tanstack/react-query';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -68,31 +67,10 @@ const orderTypes: Array<{
   },
 ];
 
-// Cạnh dài tối đa của ảnh sản phẩm sau khi resize (px) trước khi upload.
-const MAX_IMAGE_DIMENSION = 1600;
-
-// Resize cạnh dài về <= MAX_IMAGE_DIMENSION + nén JPEG trước khi up: tránh trần 5MB của BE,
-// tăng tốc trên mạng yếu, và ép HEIC (iPhone) về JPEG. Nếu native module chưa sẵn (dev build
-// cũ chưa rebuild) thì fallback dùng ảnh gốc thay vì làm hỏng luồng upload.
+// Dev client hiện tại có thể chưa có native module ExpoImageManipulator.
+// Dùng ảnh gốc để tránh crash; có thể bật lại resize sau khi native build đã link module này.
 const resizeForUpload = async (asset: ImagePicker.ImagePickerAsset): Promise<string> => {
-  try {
-    const longestEdge = Math.max(asset.width ?? 0, asset.height ?? 0);
-    const resizeActions: ImageManipulator.Action[] =
-      longestEdge > MAX_IMAGE_DIMENSION
-        ? [
-            (asset.width ?? 0) >= (asset.height ?? 0)
-              ? { resize: { width: MAX_IMAGE_DIMENSION } }
-              : { resize: { height: MAX_IMAGE_DIMENSION } },
-          ]
-        : [];
-    const processed = await ImageManipulator.manipulateAsync(asset.uri, resizeActions, {
-      compress: 0.7,
-      format: ImageManipulator.SaveFormat.JPEG,
-    });
-    return processed.uri;
-  } catch {
-    return asset.uri;
-  }
+  return asset.uri;
 };
 
 // "Loại dịch vụ" (Hàng sạch/Hỗn hợp) chỉ áp dụng cho tuyến VND - JPY (VN đi Nhật) → chỉ hiện
@@ -190,12 +168,6 @@ export default function CreateOrderScreen() {
   };
 
   const handleSelectType = (type: (typeof orderTypes)[number]) => {
-    // Temporarily keep consignment visible but disable entry until the feature is ready.
-    if (type.id === 'KY_GUI') {
-      Alert.alert('Thông báo', 'Chức năng sẽ sớm ra mắt');
-      return;
-    }
-
     form.reset(blankOrderValues(type.id));
     resetAddressCreation();
     setSelectedType(type.id);
@@ -652,7 +624,7 @@ export default function CreateOrderScreen() {
     <ModalShell visible={confirmOpen} title="Xác nhận tạo đơn" onClose={() => setConfirmOpen(false)}>
       <View style={styles.confirmContent}>
         <View style={styles.confirmIcon}>
-          <Feather name="shopping-bag" size={24} color={colors.primaryDark} />
+          <Feather name={selectedType === 'KY_GUI' ? 'truck' : 'shopping-bag'} size={24} color={colors.primaryDark} />
         </View>
         <Text style={styles.confirmTitle}>Tạo đơn {selectedTitle}?</Text>
         <Text style={styles.confirmText}>Kiểm tra thông tin đơn hàng trước khi gửi yêu cầu tạo đơn.</Text>

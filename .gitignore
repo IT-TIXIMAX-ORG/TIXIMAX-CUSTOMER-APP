@@ -42,3 +42,7 @@ yarn-error.*
 
 # backup icon launcher cu (sinh boi scripts/generate-launcher-icons.ps1)
 /backup-launcher-icons
+
+# log chay expo/dev cuc bo (khong commit)
+.codex-expo-*.log
+*.codex-expo-*.log
