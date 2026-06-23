@@ -54,6 +54,18 @@ const ACCOUNT_NOT_VERIFIED_CODE = 1009;
 const GOOGLE_REDIRECT_URL = 'tiximaxcustomerapp://auth/google-callback';
 const GOOGLE_LOGIN_DISABLED = true;
 
+// Nguồn khách hàng — đồng bộ với web FE (register-form.component.tsx)
+const CUSTOMER_SOURCE_OPTIONS = [
+  { label: 'Không chọn', value: '' },
+  { label: 'Google', value: 'Google' },
+  { label: 'Facebook', value: 'Facebook' },
+  { label: 'Group Zalo', value: 'Group Zalo' },
+  { label: 'Tiktok', value: 'Tiktok' },
+  { label: 'Sale', value: 'Sale' },
+  { label: 'Website', value: 'Website' },
+  { label: 'KH giới thiệu', value: 'KH giới thiệu' },
+];
+
 WebBrowser.maybeCompleteAuthSession();
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
@@ -114,6 +126,7 @@ export default function LoginScreen() {
       phone: '',
       password: '',
       passwordConfirm: '',
+      source: '',
       staffId: '',
     },
   });
@@ -138,6 +151,9 @@ export default function LoginScreen() {
     defaultValues: { newPassword: '', confirmPassword: '' },
   });
 
+  // Nguồn khách hàng đang chọn — điều khiển hiển thị dropdown nhân viên giới thiệu
+  const registerSource = registerForm.watch('source');
+
   const loadRegisterStaff = useCallback(async () => {
     try {
       setIsRegisterStaffLoading(true);
@@ -157,10 +173,11 @@ export default function LoginScreen() {
   }, []);
 
   useEffect(() => {
-    if (!isRegisterVisible) return;
+    // Chỉ tải danh sách sale khi cần (nguồn khách hàng = Sale)
+    if (!isRegisterVisible || registerForm.getValues('source') !== 'Sale') return;
 
     void loadRegisterStaff();
-  }, [isRegisterVisible, loadRegisterStaff]);
+  }, [isRegisterVisible, registerSource, loadRegisterStaff]);
 
   const closeRegisterModal = () => {
     setIsRegisterVisible(false);
@@ -294,7 +311,8 @@ export default function LoginScreen() {
         phone: values.phone,
         password: values.password,
         locale: 'vi',
-        ...(values.staffId ? { staffId: values.staffId } : {}),
+        ...(values.source ? { source: values.source } : {}),
+        ...(values.source === 'Sale' && values.staffId ? { staffId: values.staffId } : {}),
       });
       loginForm.setValue('email', normalizedRegisterEmail);
       loginForm.setValue('password', '');
@@ -577,7 +595,18 @@ export default function LoginScreen() {
         visible={isRegisterVisible}
         title="Đăng ký"
         onClose={closeRegisterModal}
-        keyboardContentMaxHeight={228}
+        footer={
+          <View style={styles.modalActions}>
+            <AppButton title="Đóng" variant="outline" onPress={closeRegisterModal} style={{ flex: 1 }} />
+            <AppButton
+              title="Đăng ký"
+              onPress={onRegister}
+              isLoading={isRegisterLoading}
+              disabled={!registerForm.formState.isValid}
+              style={{ flex: 1 }}
+            />
+          </View>
+        }
       >
         <FormInput control={registerForm.control} name="fullName" label="Họ tên" />
         <FormInput
@@ -608,33 +637,44 @@ export default function LoginScreen() {
         />
         <Controller
           control={registerForm.control}
-          name="staffId"
+          name="source"
           render={({ field: { value, onChange } }) => (
             <SelectSheet
-              label="Nhân viên giới thiệu"
+              label="Nguồn khách hàng"
+              placeholder="Chọn nguồn khách hàng"
               value={value}
-              options={registerStaffSelectOptions}
-              onChange={onChange}
-              onOpen={() => {
-                if (!isRegisterStaffLoading && !registerStaffOptions.length) {
-                  void loadRegisterStaff();
+              options={CUSTOMER_SOURCE_OPTIONS}
+              onChange={(next) => {
+                onChange(next);
+                // Đổi nguồn khác Sale → bỏ chọn nhân viên giới thiệu
+                if (next !== 'Sale') {
+                  registerForm.setValue('staffId', '');
                 }
               }}
-              statusText={registerStaffStatusText}
-              statusTone={registerStaffError && !isRegisterStaffLoading ? 'error' : 'muted'}
             />
           )}
         />
-        <View style={styles.modalActions}>
-          <AppButton title="Đóng" variant="outline" onPress={closeRegisterModal} style={{ flex: 1 }} />
-          <AppButton
-            title="Đăng ký"
-            onPress={onRegister}
-            isLoading={isRegisterLoading}
-            disabled={!registerForm.formState.isValid}
-            style={{ flex: 1 }}
+        {registerSource === 'Sale' ? (
+          <Controller
+            control={registerForm.control}
+            name="staffId"
+            render={({ field: { value, onChange } }) => (
+              <SelectSheet
+                label="Nhân viên giới thiệu"
+                value={value}
+                options={registerStaffSelectOptions}
+                onChange={onChange}
+                onOpen={() => {
+                  if (!isRegisterStaffLoading && !registerStaffOptions.length) {
+                    void loadRegisterStaff();
+                  }
+                }}
+                statusText={registerStaffStatusText}
+                statusTone={registerStaffError && !isRegisterStaffLoading ? 'error' : 'muted'}
+              />
+            )}
           />
-        </View>
+        ) : null}
       </ModalShell>
 
       <ModalShell visible={isVerifyVisible} title="Xác thực OTP" onClose={closeVerifyModal}>

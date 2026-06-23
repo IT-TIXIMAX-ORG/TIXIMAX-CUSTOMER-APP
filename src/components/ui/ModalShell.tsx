@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,44 +12,26 @@ interface ModalShellProps {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
-  keyboardContentMaxHeight?: number;
+  /**
+   * Vùng cố định ở đáy modal (vd. nút hành động "Đóng" / "Đăng ký").
+   * Nằm ngoài ScrollView nên luôn hiển thị, không phải cuộn xuống mới thấy.
+   */
+  footer?: React.ReactNode;
 }
 
-export function ModalShell({
-  visible,
-  title,
-  onClose,
-  children,
-  keyboardContentMaxHeight,
-}: ModalShellProps) {
+export function ModalShell({ visible, title, onClose, children, footer }: ModalShellProps) {
   const { top } = useSafeAreaInsets();
   const safeBottomPadding = useSafeBottomPadding();
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!visible) setIsKeyboardVisible(false);
-  }, [visible]);
 
   if (!visible) return null;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View
-        style={[
-          styles.backdrop,
-          isKeyboardVisible && styles.backdropWithKeyboard,
-          isKeyboardVisible && { paddingTop: Math.max(top, spacing.sm) },
-        ]}
+      {/* KeyboardAvoidingView nâng cả sheet lên trên bàn phím một cách mượt mà,
+          thay cho cơ chế tự lắng nghe keyboard + đổi vị trí (vốn bị "bật lại" khi scroll). */}
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={[styles.backdrop, { paddingTop: Math.max(top, spacing.sm) }]}
       >
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.sheet}>
@@ -66,23 +48,24 @@ export function ModalShell({
             </Pressable>
           </View>
           <ScrollView
-            style={[
-              styles.scroll,
-              isKeyboardVisible && keyboardContentMaxHeight
-                ? { maxHeight: keyboardContentMaxHeight }
-                : null,
+            style={styles.scroll}
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: footer ? spacing.md : safeBottomPadding },
             ]}
-            contentContainerStyle={[styles.content, { paddingBottom: safeBottomPadding }]}
-            keyboardDismissMode="on-drag"
+            keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
             nestedScrollEnabled
             showsVerticalScrollIndicator={false}
           >
             {children}
           </ScrollView>
+          {footer ? (
+            <View style={[styles.footer, { paddingBottom: safeBottomPadding }]}>{footer}</View>
+          ) : null}
         </View>
         <Toast />
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -93,11 +76,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(20,20,20,0.35)',
   },
-  backdropWithKeyboard: {
-    justifyContent: 'flex-start',
-  },
   sheet: {
     maxHeight: '88%',
+    // flexShrink để sheet co lại vừa khít phần trống phía trên bàn phím,
+    // nhờ vậy header không bị đẩy khuất lên trên khi form dài + bàn phím mở.
+    flexShrink: 1,
     backgroundColor: colors.surface,
     borderTopLeftRadius: borderRadius['2xl'],
     borderTopRightRadius: borderRadius['2xl'],
@@ -130,5 +113,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  footer: {
+    paddingTop: spacing.md,
+    marginTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
   },
 });
