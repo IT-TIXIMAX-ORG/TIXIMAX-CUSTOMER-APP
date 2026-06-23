@@ -24,7 +24,10 @@ const unwrapList = (value: unknown): unknown[] => {
 
 const STAFF_QUERY = 'page=1&size=20&role=LEAD_SALE%2CSTAFF_SALE';
 const STAFF_PATH = `/customer-portal/staff?${STAFF_QUERY}`;
-const STAFF_TIMEOUT_MS = 8000;
+// 30s để đồng bộ với timeout mặc định của http-client (login cũng dùng 30s).
+// 8s trước đây quá gắt: BE staging cold-start / mạng mobile chậm thường > 8s nên
+// danh sách sale luôn timeout dù endpoint khỏe. Áp cho cả axios timeout lẫn lớp race.
+const STAFF_TIMEOUT_MS = 30000;
 
 const parseReferralStaff = (value: unknown): ReferralStaffOption[] =>
   unwrapList(value)

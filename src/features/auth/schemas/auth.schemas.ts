@@ -27,6 +27,7 @@ export const registerSchema = z
     phone: z.string().trim().min(1, 'Vui lòng nhập số điện thoại'),
     password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
     passwordConfirm: z.string().min(1, 'Vui lòng nhập lại mật khẩu'),
+    source: z.string(),
     staffId: z.string(),
   })
   .refine((data) => data.password === data.passwordConfirm, {

@@ -483,6 +483,7 @@ export interface CustomerRegisterPayload {
   phone: string;
   password: string;
   locale?: 'vi' | 'en';
+  source?: string;
   staffId?: number | string;
 }
 
