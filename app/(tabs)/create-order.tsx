@@ -220,11 +220,8 @@ export default function CreateOrderScreen() {
   };
 
   const pickImage = async (index: number) => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Toast.show({ type: 'error', text1: 'Cần quyền truy cập thư viện ảnh' });
-      return;
-    }
+    // Dùng Android Photo Picker (Expo SDK 56) — không cần quyền READ_MEDIA_IMAGES,
+    // tuân thủ chính sách Photo and Video Permissions của Google Play.
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,

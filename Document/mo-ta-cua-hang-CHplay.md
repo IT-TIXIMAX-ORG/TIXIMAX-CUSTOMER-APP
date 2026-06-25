@@ -1,86 +1,138 @@
-# Nội dung Store Listing — Tiximax (CH Play)
+Nội dung Store Listing
+Tiximax (Google Play / CH Play)
+Lưu ý triển khai:
+Tài liệu này dùng để điền thông tin khi phát hành ứng dụng trên Google Play Console.
+Trước khi submit, cần rà soát lại danh sách tính năng để đảm bảo khớp với phiên bản đầu tiên phát hành.
+Các mục thuộc phần “Sắp ra mắt” nên cập nhật dần theo từng phiên bản sau.
 
-> File này để copy vào Google Play Console. Hãy rà lại danh sách tính năng cho khớp đúng bản đầu tiên bạn phát hành; phần "Sắp ra mắt" cập nhật dần ở các version sau.
+1. Tên ứng dụng (App name)
+Tiximax-Customer’s App
 
----
 
-## Tên ứng dụng (App name — tối đa 30 ký tự)
+2. Mô tả ngắn (Short Description)
+Giới hạn: Tối đa 80 ký tự
+Mua hộ-vận chuyển hàng quốc tế, theo dõi đơn và quản lý vận chuyển ngay trên điện thoại.
 
-```
-Tiximax - Mua hộ & Vận chuyển
-```
 
-(Phương án ngắn: `Tiximax`)
-
----
-
-## Mô tả ngắn (Short description — tối đa 80 ký tự)
-
-```
-Mua hộ hàng quốc tế, theo dõi đơn và quản lý vận chuyển ngay trên điện thoại.
-```
-
----
-
-## Mô tả đầy đủ (Full description — tối đa 4000 ký tự)
-
-```
+3. Mô tả đầy đủ (Full Description)
+Giới hạn: Tối đa 4000 ký tự
 Tiximax là ứng dụng mua hộ và vận chuyển hàng quốc tế, giúp bạn đặt mua sản phẩm từ các website nước ngoài và theo dõi toàn bộ hành trình đơn hàng về Việt Nam — tất cả trên một ứng dụng duy nhất.
 
 TÍNH NĂNG HIỆN CÓ
 
-• Tạo đơn mua hộ nhanh chóng
-Chỉ cần dán link sản phẩm, nhập số lượng và ghi chú, kèm ảnh sản phẩm nếu cần. Tiximax lo phần còn lại.
+• Tạo đơn mua hộ nhanh chóng  
+Chỉ cần dán link sản phẩm, nhập số lượng và ghi chú, kèm ảnh sản phẩm nếu cần. Tiximax xử lý toàn bộ quy trình còn lại cho bạn.
 
-• Ký gửi hàng hóa
-Gửi hàng có sẵn về Việt Nam qua dịch vụ ký gửi. Chọn tuyến, loại sản phẩm, nhập thông tin kiện hàng và địa chỉ nhận — theo dõi đơn ký gửi ngay trong ứng dụng.
+• Ký gửi hàng hóa  
+Gửi hàng có sẵn về Việt Nam thông qua dịch vụ ký gửi. Chọn tuyến vận chuyển, loại sản phẩm, nhập thông tin kiện hàng và địa chỉ nhận hàng ngay trên ứng dụng.
 
-• Theo dõi đơn hàng theo thời gian thực
-Xem chi tiết từng sản phẩm trong đơn, trạng thái từng chặng (mua hàng, về kho, đóng gói, vận chuyển), mã vận đơn và lịch sử xử lý rõ ràng. Lọc đơn theo khoảng ngày, trạng thái hoặc từ khóa.
+• Theo dõi đơn hàng theo thời gian thực  
+Theo dõi trạng thái đơn hàng chi tiết theo từng giai đoạn: mua hàng, về kho, đóng gói, vận chuyển, giao hàng. Hỗ trợ tra cứu theo mã đơn, ngày tạo hoặc trạng thái xử lý.
 
-• Quản lý hàng về kho Việt Nam
-Xem kiện hàng đã về kho VN, xác nhận và tạo phiếu giao nội địa (chọn địa chỉ, đơn vị vận chuyển), quản lý danh sách phiếu giao — tất cả tự thao tác ngay trên ứng dụng.
+• Quản lý hàng về kho Việt Nam  
+Kiểm tra kiện hàng đã về kho Việt Nam, xác nhận thông tin và tạo phiếu giao hàng nội địa trực tiếp trên ứng dụng.
 
-• Thanh toán phí vận chuyển nội địa
-Xem cước vận chuyển từng mã ship, thanh toán bằng số dư ví hoặc chuyển khoản qua mã QR, áp dụng voucher giảm giá. Ứng dụng tự cập nhật trạng thái khi thanh toán hoàn tất.
+• Thanh toán phí vận chuyển nội địa  
+Xem chi phí vận chuyển từng đơn hàng, thanh toán bằng số dư ví hoặc chuyển khoản ngân hàng thông qua mã QR tích hợp sẵn. Hệ thống tự động cập nhật trạng thái sau khi thanh toán thành công.
 
-• Quản lý giao dịch & số dư
-Xem lịch sử nạp/rút, thanh toán, hoàn tiền và số dư tài khoản minh bạch theo từng giao dịch. Lọc giao dịch theo khoảng ngày dễ dàng.
+• Quản lý giao dịch và số dư tài khoản  
+Theo dõi lịch sử nạp tiền, rút tiền, thanh toán, hoàn tiền và số dư tài khoản minh bạch theo từng giao dịch.
 
-• Thanh toán đơn mua hộ thuận tiện
-Nhận thông tin chuyển khoản và mã QR ngay trong ứng dụng để thanh toán đơn hàng.
+• Thanh toán đơn mua hộ thuận tiện  
+Nhận thông tin thanh toán và mã QR chuyển khoản trực tiếp trong ứng dụng để xử lý thanh toán nhanh chóng.
 
-• Quản lý tài khoản & địa chỉ nhận hàng
-Lưu nhiều địa chỉ giao nhận, quản lý thông tin cá nhân và xem nhân viên hỗ trợ phụ trách bạn.
+• Quản lý tài khoản và địa chỉ nhận hàng  
+Lưu nhiều địa chỉ nhận hàng, cập nhật thông tin cá nhân và theo dõi thông tin nhân viên hỗ trợ phụ trách tài khoản của bạn.
 
-• Liên hệ hỗ trợ nhanh
-Gọi điện hoặc nhắn tin qua Zalo trực tiếp với nhân viên hỗ trợ ngay từ màn hình chính của ứng dụng.
+• Liên hệ hỗ trợ nhanh chóng  
+Kết nối trực tiếp với nhân viên hỗ trợ thông qua gọi điện hoặc nhắn tin Zalo ngay từ màn hình chính.
 
-• Đăng ký & đăng nhập an toàn
-Đăng ký bằng tài khoản, mật khẩu và xác minh qua email.
+• Đăng ký và đăng nhập an toàn  
+Đăng ký tài khoản bằng email, mật khẩu và xác minh email để đảm bảo an toàn tài khoản người dùng.
 
-SẮP RA MẮT (trong các phiên bản tới)
+SẮP RA MẮT (TRONG CÁC PHIÊN BẢN TIẾP THEO)
 
-• Đăng nhập bằng tài khoản Google
-• Thông báo đẩy khi đơn hàng có cập nhật mới
+• Đăng nhập bằng tài khoản Google  
+• Thông báo đẩy khi đơn hàng có cập nhật trạng thái mới
 
-Tải Tiximax ngay để mua sắm quốc tế dễ dàng và theo dõi đơn hàng mọi lúc, mọi nơi!
+Tải Tiximax ngay hôm nay để mua sắm quốc tế dễ dàng hơn và quản lý đơn hàng mọi lúc, mọi nơi.
 
----
-Cần hỗ trợ? Liên hệ: info@tiximax.net
-Website: https://tiximax.net
-```
+––––––––––––––––––
 
----
+Cần hỗ trợ?  
+Email: global.trans@tiximax.net 
+Website: https://sys.tiximax.net
 
-## Thông tin khác cần điền trong Play Console
 
-- **Danh mục (Category):** Mua sắm (Shopping) — hoặc Doanh nghiệp (Business)
-- **Email liên hệ:** info@tiximax.net
-- **Website:** https://tiximax.net
-- **Tags:** mua hộ, vận chuyển quốc tế, theo dõi đơn hàng (chọn từ danh sách Google gợi ý)
+4. Thông tin bổ sung cần khai báo trong Google Play Console
+Danh mục ứng dụng (Category)
+Chọn một trong hai danh mục phù hợp:
+Shopping (Mua sắm) → Khuyến nghị ưu tiên
+Business (Doanh nghiệp) → Nếu tập trung logistics/B2B
 
-### Tài nguyên hình ảnh cần chuẩn bị (không nằm trong file này)
-- Icon 512×512 PNG
-- Feature graphic 1024×500
-- Tối thiểu 2 (nên 4–8) ảnh chụp màn hình điện thoại (giao diện app)
+Thông tin liên hệ nhà phát triển
+Email hỗ trợ
+info@tiximax.net
+
+Website
+https://tiximax.net
+
+
+Tags / Từ khóa đề xuất
+Khi Google Play Console yêu cầu chọn tag, ưu tiên các từ khóa gần nhất với mô hình ứng dụng:
+mua hộ
+vận chuyển quốc tế
+theo dõi đơn hàng
+logistics
+shopping
+cross-border shipping
+parcel tracking
+(Chọn theo danh sách Google gợi ý nếu có)
+
+5. Tài nguyên hình ảnh cần chuẩn bị
+(Các mục này không nằm trong nội dung mô tả nhưng bắt buộc để publish ứng dụng)
+App Icon
+512 × 512 px
+PNG
+Nền trong suốt hoặc nền đặc
+
+
+Feature Graphic
+1024 × 500 px
+PNG hoặc JPG
+
+Dùng để hiển thị trên trang ứng dụng Google Play.
+
+Ảnh chụp màn hình (Screenshots)
+Yêu cầu tối thiểu:
+Tối thiểu: 2 ảnh
+Khuyến nghị: 4 – 8 ảnh
+
+Nên chụp các màn hình sau:
+Trang chủ ứng dụng
+Tạo đơn mua hộ
+Theo dõi đơn hàng
+Danh sách giao dịch
+Thanh toán QR
+Quản lý tài khoản
+Ký gửi hàng hóa
+Hỗ trợ khách hàng / Zalo chat
+
+6. Checklist trước khi Submit Google Play
+Đảm bảo đã hoàn thành đầy đủ các mục sau:
+☐ Privacy Policy URL đã public
+☐ Khai báo Data Safety chính xác
+☐ App Icon hoàn chỉnh
+☐ Feature Graphic hoàn chỉnh
+☐ Có tối thiểu 2 ảnh screenshot
+☐ Đã test luồng đăng ký và đăng nhập
+☐ Đã test upload ảnh sản phẩm
+☐ Đã test thanh toán QR
+☐ Kiểm tra toàn bộ nội dung mô tả đúng với bản release đầu tiên
+☐ Kiểm tra email support hoạt động bình thường
+
+Thông tin chính thức
+Tên ứng dụng: Tiximax
+Email hỗ trợ: global.trans@tiximax.net
+Website: https://sys.tiximax.net
+
