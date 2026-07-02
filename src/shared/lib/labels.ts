@@ -159,6 +159,10 @@ export const orderLogActionLabel = (action?: string | null) => {
       return 'Duyệt đơn khách hàng';
     case 'XAC_NHAN_DON':
       return 'Xác nhận đơn';
+    case 'TU_CHOI_DON':
+      return 'Từ chối đơn';
+    case 'TU_CHOI_DON_CUSTOMER':
+      return 'Từ chối đơn khách hàng';
     case 'HUY_DON':
       return 'Hủy đơn';
     case 'YEU_CAU_HUY':

@@ -25,6 +25,14 @@ export const QUERY_KEYS = {
       bankAccounts: () =>
         ['customer-portal', 'ship-payment', 'banks'] as const,
     },
+    shipOrders: {
+      summary: (draftId: string | null) =>
+        ['customer-portal', 'ship-order-summary', draftId] as const,
+      list: (query: unknown) =>
+        ['customer-portal', 'ship-orders', query] as const,
+      detail: (id: string) =>
+        ['customer-portal', 'ship-orders', 'detail', id] as const,
+    },
   },
   auth: {
     session: () => ['auth', 'session'] as const,

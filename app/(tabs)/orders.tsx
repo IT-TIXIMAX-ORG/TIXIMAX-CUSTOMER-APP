@@ -6,7 +6,6 @@ import {
   FlatList,
   ActivityIndicator,
   Pressable,
-  Alert,
   Platform,
   RefreshControl,
 } from 'react-native';
@@ -21,24 +20,22 @@ import {
   useCustomerDomesticDeliveries,
   useCustomerOrders,
 } from '@/src/features/customer-portal/shared/hooks/use-customer-portal-data';
+import { useShipOrders } from '@/src/features/customer-portal/shared/hooks/use-ship-orders';
 import type {
   CustomerActiveOrder,
-  CustomerDomesticDeliveryItem,
   CustomerOrder,
 } from '@/src/features/customer-portal/shared/types/customer-portal.types';
+import type { ShipOrder } from '@/src/features/customer-portal/shared/types/ship-order.types';
 import {
-  bookAllingoForDomesticDelivery,
-  cancelAllingoForDomesticDelivery,
   getCustomerActiveOrders,
-  getCustomerDomesticDeliveries,
   getCustomerOrders,
-  getDomesticDeliveryShippingQuotes,
-  syncAllingoForDomesticDelivery,
   type CustomerActiveOrderQuery,
   type CustomerOrderQuery,
 } from '@/src/features/customer-portal/shared/services/customer-portal.service';
+import { getCustomerShipOrders } from '@/src/features/customer-portal/shared/services/ship-order.service';
 import { ActiveOrderCard } from '@/src/components/dashboard/ActiveOrderCard';
 import { OrderListItem } from '@/src/components/orders/OrderListItem';
+import { AllingoTrackingStrip } from '@/src/components/orders/AllingoTrackingStrip';
 import { AppButton } from '@/src/components/ui/AppButton';
 import { AppInput } from '@/src/components/ui/AppInput';
 import { DatePickerField } from '@/src/components/ui/DatePickerField';
@@ -49,11 +46,11 @@ import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { SelectSheet } from '@/src/components/ui/SelectSheet';
 import { StatusBadge } from '@/src/components/ui/StatusBadge';
 import { useScreenContentTopPadding, useTabScreenBottomPadding } from '@/src/shared/lib/layout/safe-area';
-import { formatCurrency, formatDate, formatWeight } from '@/src/shared/lib/utils';
+import { formatDate } from '@/src/shared/lib/utils';
 import { QUERY_KEYS } from '@/src/shared/lib/query/query-keys';
 
 type OrdersTab = 'active' | 'history' | 'domestic';
-type OrderListRow = CustomerActiveOrder | CustomerOrder | CustomerDomesticDeliveryItem;
+type OrderListRow = CustomerActiveOrder | CustomerOrder | ShipOrder;
 
 const ORDER_TYPE_OPTIONS = [
   { label: 'Tất cả loại đơn', value: '' },
@@ -70,6 +67,19 @@ const MAIN_STATUS_OPTIONS = [
   { label: 'Đang chuyển VN', value: 'DANG_CHUYEN_VN' },
   { label: 'Chờ giao', value: 'CHO_GIAO' },
 ];
+
+const CARRIER_LABEL: Record<string, string> = {
+  JT: 'J&T Express',
+  ALLINGO: 'Allingo',
+  OTHER: 'Hãng khác',
+  VNPOST: 'VNPost',
+};
+
+const SHIP_ORDER_STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Chờ xuất kho',
+  EXPORTED: 'Đã xuất kho',
+  CANCELLED: 'Đã hủy',
+};
 
 // Filter "Chờ thanh toán" gộp cả CHO_THANH_TOAN (tiền hàng) lẫn CHO_THANH_TOAN_SHIP (vận chuyển)
 // — với khách đây là cùng một việc "cần thanh toán". Chỉ áp cho tab Đang xử lý (active orders nhận
@@ -89,6 +99,8 @@ const isValidDateFilter = (value: string) => {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 };
 
+const DOMESTIC_PAGE_SIZE = 10;
+
 export default function OrdersScreen() {
   const router = useRouter();
   const contentPaddingBottom = useTabScreenBottomPadding();
@@ -100,7 +112,7 @@ export default function OrdersScreen() {
   const [domesticPage, setDomesticPage] = useState(1);
   const [activeItems, setActiveItems] = useState<CustomerActiveOrder[]>([]);
   const [historyItems, setHistoryItems] = useState<CustomerOrder[]>([]);
-  const [domesticItems, setDomesticItems] = useState<CustomerDomesticDeliveryItem[]>([]);
+  const [domesticItems, setDomesticItems] = useState<ShipOrder[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
@@ -113,9 +125,6 @@ export default function OrdersScreen() {
   const [dateTo, setDateTo] = useState('');
   const [draftDateFrom, setDraftDateFrom] = useState('');
   const [draftDateTo, setDraftDateTo] = useState('');
-  const [quoteItem, setQuoteItem] = useState<CustomerDomesticDeliveryItem | null>(null);
-  const [quotes, setQuotes] = useState<Array<{ serviceId: string; serviceName: string; partnerName: string; price: number }>>([]);
-  const [loadingQuotes, setLoadingQuotes] = useState(false);
   const pageSize = 10;
 
   const activeQuery = useMemo<CustomerActiveOrderQuery>(
@@ -142,9 +151,17 @@ export default function OrdersScreen() {
     [dateFrom, dateTo, keyword, orderType, status],
   );
 
+  const domesticQueryArg = useMemo(() => ({ page: domesticPage, size: DOMESTIC_PAGE_SIZE }), [domesticPage]);
+
   const activeOrdersQuery = useCustomerActiveOrders(activePage, pageSize, activeQuery);
   const historyOrdersQuery = useCustomerOrders(historyPage, pageSize, historyQuery);
-  const domesticQuery = useCustomerDomesticDeliveries(domesticPage, pageSize);
+  const domesticQuery = useShipOrders(domesticQueryArg, { refetchInterval: 30000 });
+  // Đếm phiếu LOCKED sẵn sàng tạo đơn giao (banner). Danh sách chính của tab là ship_orders.
+  const lockedDraftsQuery = useCustomerDomesticDeliveries(1, 50);
+  const lockedDrafts = useMemo(
+    () => (lockedDraftsQuery.data?.content ?? []).filter((d) => d.status === 'LOCKED'),
+    [lockedDraftsQuery.data],
+  );
 
   useEffect(() => {
     if (!activeOrdersQuery.data?.content) return;
@@ -158,7 +175,7 @@ export default function OrdersScreen() {
 
   useEffect(() => {
     if (!domesticQuery.data?.content) return;
-    setDomesticItems((prev) => mergeByKey(domesticPage === 1 ? [] : prev, domesticQuery.data.content, 'draftDomesticId'));
+    setDomesticItems((prev) => mergeByKey(domesticPage === 1 ? [] : prev, domesticQuery.data.content, 'shipOrderId'));
   }, [domesticQuery.data, domesticPage]);
 
   const resetPageAndData = () => {
@@ -216,8 +233,12 @@ export default function OrdersScreen() {
     resetPageAndData();
   };
 
-  const refreshDomestic = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['customer-portal', 'domestic-deliveries'] });
+  const goToCreateDelivery = () => {
+    if (lockedDrafts.length === 1) {
+      router.push(`/ship-orders/${lockedDrafts[0].draftDomesticId}` as any);
+    } else {
+      router.push('/ship-orders/select' as any);
+    }
   };
 
   const refreshAllOrderTabs = async () => {
@@ -228,7 +249,7 @@ export default function OrdersScreen() {
       const [activeResult, historyResult, domesticResult] = await Promise.allSettled([
         getCustomerActiveOrders(1, pageSize, activeQuery),
         getCustomerOrders(1, pageSize, historyQuery),
-        getCustomerDomesticDeliveries(1, pageSize),
+        getCustomerShipOrders({ page: 1, size: DOMESTIC_PAGE_SIZE }),
       ]);
 
       if (activeResult.status === 'fulfilled') {
@@ -249,77 +270,32 @@ export default function OrdersScreen() {
       }
       if (domesticResult.status === 'fulfilled') {
         queryClient.setQueryData(
-          ['customer-portal', 'domestic-deliveries', 1, pageSize],
+          QUERY_KEYS.customerPortal.shipOrders.list({ page: 1, size: DOMESTIC_PAGE_SIZE }),
           domesticResult.value,
         );
         setDomesticPage(1);
         setDomesticItems(domesticResult.value.content);
       }
+      // Invalidate cả banner (domestic-deliveries) lẫn mọi trang ship-orders để trang >1 refetch khi quay lại.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['customer-portal', 'domestic-deliveries'] }),
+        queryClient.invalidateQueries({ queryKey: ['customer-portal', 'ship-orders'] }),
+      ]);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const openQuotes = async (item: CustomerDomesticDeliveryItem) => {
-    setQuoteItem(item);
-    setLoadingQuotes(true);
-    try {
-      const data = await getDomesticDeliveryShippingQuotes(item.draftDomesticId);
-      setQuotes(data.sort((a, b) => a.price - b.price));
-    } catch (error: any) {
-      Toast.show({ type: 'error', text1: error?.message || 'Không thể tải báo giá' });
-      setQuoteItem(null);
-    } finally {
-      setLoadingQuotes(false);
-    }
-  };
-
-  const bookQuote = async (serviceId: string) => {
-    if (!quoteItem) return;
-    try {
-      await bookAllingoForDomesticDelivery(quoteItem.draftDomesticId, serviceId);
-      Toast.show({ type: 'success', text1: 'Đã đặt vận chuyển nội địa' });
-      setQuoteItem(null);
-      await refreshDomestic();
-    } catch (error: any) {
-      Toast.show({ type: 'error', text1: error?.message || 'Đặt vận chuyển thất bại' });
-    }
-  };
-
-  const cancelAllingo = (item: CustomerDomesticDeliveryItem) => {
-    Alert.alert('Hủy vận chuyển', 'Bạn có chắc muốn hủy đơn vận chuyển nội địa này?', [
-      { text: 'Đóng', style: 'cancel' },
-      {
-        text: 'Hủy vận chuyển',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await cancelAllingoForDomesticDelivery(item.draftDomesticId, 'Khách hàng yêu cầu hủy từ app');
-            Toast.show({ type: 'success', text1: 'Đã gửi yêu cầu hủy' });
-            await refreshDomestic();
-          } catch (error: any) {
-            Toast.show({ type: 'error', text1: error?.message || 'Hủy vận chuyển thất bại' });
-          }
-        },
-      },
-    ]);
-  };
-
-  const syncAllingo = async (item: CustomerDomesticDeliveryItem) => {
-    try {
-      await syncAllingoForDomesticDelivery(item.draftDomesticId);
-      Toast.show({ type: 'success', text1: 'Đã đồng bộ trạng thái' });
-      await refreshDomestic();
-    } catch (error: any) {
-      Toast.show({ type: 'error', text1: error?.message || 'Đồng bộ thất bại' });
-    }
-  };
-
   const currentQuery =
     activeTab === 'active' ? activeOrdersQuery : activeTab === 'history' ? historyOrdersQuery : domesticQuery;
-  const currentData = currentQuery.data;
   const currentItems: OrderListRow[] =
     activeTab === 'active' ? activeItems : activeTab === 'history' ? historyItems : domesticItems;
+  const currentTotal =
+    activeTab === 'active'
+      ? activeOrdersQuery.data?.total ?? 0
+      : activeTab === 'history'
+        ? historyOrdersQuery.data?.total ?? 0
+        : domesticQuery.data?.totalElements ?? 0;
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -334,28 +310,42 @@ export default function OrdersScreen() {
         ]}
       />
       {activeTab === 'domestic' ? (
-        <View style={styles.domesticShortcutBar}>
-          <AppButton
-            title="Xác nhận"
-            size="sm"
-            variant="outline"
-            icon={<Feather name="check-square" size={14} color={colors.primary} />}
-            onPress={() => router.push('/warehouse/confirm' as any)}
-          />
-          <AppButton
-            title="Địa chỉ giao"
-            size="sm"
-            variant="outline"
-            icon={<Feather name="map-pin" size={14} color={colors.primary} />}
-            onPress={() => router.push('/warehouse/addresses' as any)}
-          />
-          <AppButton
-            title="Thanh toán ship"
-            size="sm"
-            icon={<Feather name="credit-card" size={14} color={colors.black} />}
-            onPress={() => router.push('/shipping-payments' as any)}
-          />
-        </View>
+        <>
+          <View style={styles.quickActions}>
+            <QuickAction
+              icon="check-square"
+              label="Xác nhận"
+              onPress={() => router.push('/warehouse/confirm' as any)}
+            />
+            <QuickAction
+              icon="map-pin"
+              label="Địa chỉ giao"
+              onPress={() => router.push('/warehouse/addresses' as any)}
+            />
+            <QuickAction
+              icon="credit-card"
+              label="Thanh toán ship"
+              onPress={() => router.push('/shipping-payments' as any)}
+            />
+          </View>
+          {lockedDrafts.length > 0 ? (
+            <Pressable
+              style={styles.banner}
+              onPress={goToCreateDelivery}
+              accessibilityRole="button"
+              accessibilityLabel={`${lockedDrafts.length} phiếu sẵn sàng tạo đơn giao`}
+            >
+              <View style={styles.bannerIcon}>
+                <Feather name="package" size={18} color={colors.primaryDark} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.bannerTitle}>{lockedDrafts.length} phiếu sẵn sàng tạo đơn giao</Text>
+                <Text style={styles.bannerSub}>Nhấn để tạo đơn giao & đặt shipper</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color={colors.primaryDark} />
+            </Pressable>
+          ) : null}
+        </>
       ) : null}
       {activeTab !== 'domestic' ? (
         <View style={styles.filterBar}>
@@ -374,7 +364,7 @@ export default function OrdersScreen() {
   );
 
   const renderFooter = () => {
-    if (!currentData || currentData.total <= currentItems.length) return null;
+    if (currentTotal <= currentItems.length) return null;
 
     return (
       <View style={styles.footer}>
@@ -417,13 +407,13 @@ export default function OrdersScreen() {
     return (
       <EmptyState
         icon={activeTab === 'domestic' ? 'truck' : 'package'}
-        title={activeTab === 'domestic' ? 'Chưa có vận chuyển nội địa' : 'Chưa có đơn hàng'}
+        title={activeTab === 'domestic' ? 'Chưa có đơn giao' : 'Chưa có đơn hàng'}
         description={
           activeTab === 'active'
             ? 'Không có đơn hàng nào đang xử lý theo bộ lọc hiện tại.'
             : activeTab === 'history'
               ? 'Bạn chưa có lịch sử đơn hàng phù hợp.'
-              : 'Các đơn giao nội địa và trạng thái Allingo sẽ xuất hiện tại đây.'
+              : 'Tạo đơn giao từ phiếu đã khóa để theo dõi giao hàng nội địa tại đây.'
         }
       />
     );
@@ -433,11 +423,9 @@ export default function OrdersScreen() {
     if (activeTab === 'active') return <ActiveOrderCard order={item as CustomerActiveOrder} />;
     if (activeTab === 'history') return <OrderListItem order={item as CustomerOrder} />;
     return (
-      <DomesticDeliveryCard
-        item={item as CustomerDomesticDeliveryItem}
-        onBook={openQuotes}
-        onCancel={cancelAllingo}
-        onSync={syncAllingo}
+      <ShipOrderTabCard
+        item={item as ShipOrder}
+        onPress={() => router.push(`/ship-orders/${(item as ShipOrder).draftDomesticId}` as any)}
       />
     );
   };
@@ -446,7 +434,7 @@ export default function OrdersScreen() {
     <View style={styles.container}>
       <FlatList<OrderListRow>
         data={currentItems}
-        keyExtractor={(item) => ('orderId' in item ? item.orderId : item.draftDomesticId)}
+        keyExtractor={(item) => ('orderId' in item ? item.orderId : item.shipOrderId)}
         renderItem={renderItem}
         contentContainerStyle={[styles.listContent, { paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }]}
         ListHeaderComponent={renderHeader}
@@ -500,84 +488,97 @@ export default function OrdersScreen() {
           <AppButton title="Áp dụng" onPress={applyFilters} />
         </View>
       </ModalShell>
-
-      <ModalShell visible={Boolean(quoteItem)} title="Chọn đơn vị vận chuyển" onClose={() => setQuoteItem(null)}>
-        {loadingQuotes ? (
-          <ActivityIndicator color={colors.primary} style={{ padding: spacing.xl }} />
-        ) : quotes.length === 0 ? (
-          <EmptyState icon="truck" title="Chưa có báo giá" />
-        ) : (
-          quotes.map((quote) => (
-            <Pressable key={quote.serviceId} style={styles.quoteCard} onPress={() => bookQuote(quote.serviceId)}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.quoteName}>{quote.serviceName}</Text>
-                <Text style={styles.quotePartner}>{quote.partnerName}</Text>
-              </View>
-              <Text style={styles.quotePrice}>{formatCurrency(quote.price)}</Text>
-            </Pressable>
-          ))
-        )}
-      </ModalShell>
     </View>
   );
 }
 
-function DomesticDeliveryCard({
-  item,
-  onBook,
-  onCancel,
-  onSync,
+function QuickAction({
+  icon,
+  label,
+  onPress,
 }: {
-  item: CustomerDomesticDeliveryItem;
-  onBook: (item: CustomerDomesticDeliveryItem) => void;
-  onCancel: (item: CustomerDomesticDeliveryItem) => void;
-  onSync: (item: CustomerDomesticDeliveryItem) => void;
+  icon: keyof typeof Feather.glyphMap;
+  label: string;
+  onPress: () => void;
 }) {
-  const hasAllingo = Boolean(item.allingoOrderId);
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.quickAction, pressed && styles.quickActionPressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <View style={styles.quickActionIcon}>
+        <Feather name={icon} size={18} color={colors.primaryDark} />
+      </View>
+      <Text style={styles.quickActionLabel} numberOfLines={2}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function ShipOrderTabCard({ item, onPress }: { item: ShipOrder; onPress: () => void }) {
+  const isAllingo = item.carrierCode === 'ALLINGO';
+  const booked = Boolean(item.allingoStatus);
+  const carrierLabel = CARRIER_LABEL[item.carrierCode ?? ''] || item.carrierName || 'Hãng khác';
+  const needsBooking = isAllingo && !booked && item.status === 'PENDING';
 
   return (
-    <View style={styles.domesticCard}>
-      <View style={styles.domesticHeader}>
-        <View style={styles.domesticIcon}>
-          <Feather name="truck" size={20} color={colors.primaryDark} />
+    <Pressable
+      style={({ pressed }) => [styles.shipCard, pressed && styles.shipCardPressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Xem đơn giao ${item.shipCode}`}
+    >
+      <View style={styles.shipHeader}>
+        <View style={styles.shipIcon}>
+          <Feather name="truck" size={18} color={colors.primaryDark} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.domesticCode}>{item.shipCode || item.draftDomesticId}</Text>
-          <Text style={styles.domesticDate}>{formatDate(item.createdAt)}</Text>
+          <Text style={styles.shipCode} numberOfLines={1}>{item.shipCode || item.shipOrderId}</Text>
+          <Text style={styles.shipMeta} numberOfLines={1}>
+            {carrierLabel} · {item.shippingList.length} kiện
+            {item.bookingTime ? ` · ${formatDate(item.bookingTime)}` : ''}
+          </Text>
         </View>
-        <StatusBadge status={item.allingoStatus || item.status} />
+        <StatusBadge status={item.status} label={SHIP_ORDER_STATUS_LABEL[item.status] ?? item.status} />
       </View>
 
-      <InfoRow label="Địa chỉ" value={item.address || 'Chưa cập nhật'} />
-      <InfoRow label="SĐT" value={item.phoneNumber || '---'} />
-      <InfoRow label="Cân nặng" value={formatWeight(item.weight)} />
-      {hasAllingo ? (
-        <>
-          <InfoRow label="Dịch vụ" value={item.allingoServiceName || item.allingoPartnerName || 'Allingo'} />
-          <InfoRow label="Tổng phí" value={formatCurrency(item.allingoFeeTotal ?? item.allingoQuotedPrice ?? 0)} />
-          {item.allingoDriverName ? <InfoRow label="Tài xế" value={`${item.allingoDriverName} - ${item.allingoDriverPhone || ''}`} /> : null}
-        </>
+      {isAllingo && booked ? (
+        <AllingoTrackingStrip
+          status={item.allingoStatus}
+          failureReason={item.allingoFailureReason}
+          cancellationReason={item.allingoCancellationReason}
+        />
       ) : null}
 
-      <View style={styles.domesticActions}>
-        <AppButton title={hasAllingo ? 'Đặt lại' : 'Đặt ship'} size="sm" onPress={() => onBook(item)} />
-        {hasAllingo ? (
-          <>
-            <AppButton title="Đồng bộ" size="sm" variant="outline" onPress={() => onSync(item)} />
-            <AppButton title="Hủy" size="sm" variant="danger" onPress={() => onCancel(item)} />
-          </>
-        ) : null}
-      </View>
-    </View>
-  );
-}
+      {isAllingo && booked && item.allingoDriverName ? (
+        <View style={styles.driverRow}>
+          <Feather name="user" size={13} color={colors.textSecondary} />
+          <Text style={styles.driverText} numberOfLines={1}>
+            {item.allingoDriverName}
+            {item.allingoDriverPhone ? ` · ${item.allingoDriverPhone}` : ''}
+            {item.allingoDriverLicensePlate ? ` · ${item.allingoDriverLicensePlate}` : ''}
+          </Text>
+        </View>
+      ) : null}
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
+      <View style={styles.shipFooter}>
+        {needsBooking ? (
+          <View style={styles.needBookingPill}>
+            <Feather name="zap" size={12} color={colors.warning} />
+            <Text style={styles.needBookingText}>Cần đặt shipper</Text>
+          </View>
+        ) : (
+          <View />
+        )}
+        <View style={styles.detailHint}>
+          <Text style={styles.detailHintText}>Chi tiết</Text>
+          <Feather name="chevron-right" size={16} color={colors.primaryDark} />
+        </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -658,24 +659,91 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.md,
   },
-  domesticCard: {
+  quickActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  quickAction: {
+    flex: 1,
+    minHeight: 78,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  quickActionPressed: {
+    opacity: 0.85,
+    backgroundColor: colors.primaryLight,
+  },
+  quickActionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textPrimary,
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
+    textAlign: 'center',
+  },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.primaryBorder,
+    padding: spacing.md,
+  },
+  bannerIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerTitle: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: '900',
+    fontFamily: fontFamilyForWeight('900'),
+    color: colors.textPrimary,
+  },
+  bannerSub: {
+    marginTop: 2,
+    fontSize: typography.fontSize.xs,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    fontFamily: fontFamilyForWeight('600'),
+  },
+  shipCard: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.borderLight,
     padding: spacing.base,
     marginBottom: spacing.md,
+    gap: spacing.sm,
   },
-  domesticHeader: {
+  shipCardPressed: {
+    opacity: 0.85,
+  },
+  shipHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.md,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
   },
-  domesticIcon: {
+  shipIcon: {
     width: 40,
     height: 40,
     borderRadius: borderRadius.md,
@@ -683,71 +751,68 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  domesticCode: {
+  shipCode: {
     fontSize: typography.fontSize.base,
     fontWeight: '900',
     fontFamily: fontFamilyForWeight('900'),
     color: colors.textPrimary,
   },
-  domesticDate: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textMuted,
+  shipMeta: {
     marginTop: 2,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  infoLabel: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.xs,
     color: colors.textSecondary,
+    fontWeight: '600',
+    fontFamily: fontFamilyForWeight('600'),
   },
-  infoValue: {
+  driverRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  driverText: {
     flex: 1,
-    textAlign: 'right',
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.xs,
     color: colors.textPrimary,
     fontWeight: '700',
     fontFamily: fontFamilyForWeight('700'),
   },
-  domesticActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  domesticShortcutBar: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  quoteCard: {
+  shipFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    marginBottom: spacing.sm,
-    gap: spacing.md,
+    justifyContent: 'space-between',
+    marginTop: spacing.xs,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
   },
-  quoteName: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
-    color: colors.textPrimary,
+  needBookingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.warningLight,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  quotePartner: {
-    marginTop: 2,
+  needBookingText: {
     fontSize: typography.fontSize.xs,
-    color: colors.textSecondary,
+    color: colors.warning,
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
   },
-  quotePrice: {
+  detailHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  detailHintText: {
     fontSize: typography.fontSize.sm,
-    fontWeight: '900',
-    fontFamily: fontFamilyForWeight('900'),
     color: colors.primaryDark,
+    fontWeight: '800',
+    fontFamily: fontFamilyForWeight('800'),
   },
 });

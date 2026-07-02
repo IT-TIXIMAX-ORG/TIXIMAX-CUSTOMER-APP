@@ -47,6 +47,8 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@react-native-community/cli": "^20.2.0",
+    "@react-native-community/cli-platform-android": "^20.2.0",
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3"
   },

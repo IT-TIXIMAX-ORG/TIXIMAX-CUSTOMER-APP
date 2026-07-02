@@ -554,6 +554,10 @@ export const getCustomerDomesticDeliveries = async (
   };
 };
 
+// ⚠️ DEPRECATED — luồng Allingo cấp draft (chỉ hợp lệ khi carrier=ALLINGO + EXPORTED).
+// Kiến trúc mới là "1 draft LOCKED → N ship_orders"; book Allingo theo ship_order tại
+// ship-order.service.ts (/customer-portal/ship-orders/:id/*). Không dùng 4 hàm dưới trong UI mới.
+/** @deprecated Dùng getAllingoQuotes(shipOrderId) trong ship-order.service.ts */
 export const getDomesticDeliveryShippingQuotes = async (
   draftDomesticId: string,
 ): Promise<AllingoQuoteItem[]> => {
@@ -564,6 +568,7 @@ export const getDomesticDeliveryShippingQuotes = async (
   return (data.result as AllingoQuoteItem[]) ?? [];
 };
 
+/** @deprecated Dùng bookAllingo(shipOrderId, { serviceId }) trong ship-order.service.ts */
 export const bookAllingoForDomesticDelivery = async (
   draftDomesticId: string,
   serviceId: string,
@@ -576,10 +581,12 @@ export const bookAllingoForDomesticDelivery = async (
   return data.result as AllingoBookResult;
 };
 
+/** @deprecated Dùng cancelAllingo(shipOrderId, { reason }) trong ship-order.service.ts */
 export const cancelAllingoForDomesticDelivery = async (draftDomesticId: string, reason: string): Promise<void> => {
   await httpClient.post(`/customer-portal/domestic-deliveries/${draftDomesticId}/cancel-allingo`, { reason });
 };
 
+/** @deprecated Dùng syncAllingo(shipOrderId) trong ship-order.service.ts */
 export const syncAllingoForDomesticDelivery = async (draftDomesticId: string): Promise<void> => {
   await httpClient.post(`/customer-portal/domestic-deliveries/${draftDomesticId}/sync-allingo`);
 };

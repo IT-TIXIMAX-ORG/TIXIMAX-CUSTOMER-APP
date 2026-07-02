@@ -61,7 +61,7 @@ const fetchReferralSaleStaff = async (): Promise<ReferralStaffOption[]> => {
   const controller = new AbortController();
 
   return withTimeout(
-    fetch(`${ENV_CONFIG.apiBaseUrl}${STAFF_PATH}`, {
+    fetch(`${ENV_CONFIG.apiBaseUrl.replace(/\/$/, '')}${STAFF_PATH}`, {
       method: 'GET',
       headers: { Accept: 'application/json' },
       signal: controller.signal,

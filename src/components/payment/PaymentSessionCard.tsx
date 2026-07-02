@@ -326,11 +326,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   paymentContentBox: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    padding: spacing.md,
     gap: spacing.xs,
     marginTop: spacing.sm,
   },

@@ -88,6 +88,20 @@ function AppContent() {
           }}
         />
         <Stack.Screen
+          name="ship-orders/[draftId]"
+          options={{
+            headerShown: true,
+            title: 'Tạo đơn giao',
+            headerStyle: { backgroundColor: colors.surface },
+            headerTintColor: colors.textPrimary,
+            headerTitleStyle: {
+              fontWeight: '800',
+              fontFamily: fontFamilyForWeight('800'),
+              fontSize: 16,
+            },
+          }}
+        />
+        <Stack.Screen
           name="warehouse/confirm"
           options={{
             headerShown: true,

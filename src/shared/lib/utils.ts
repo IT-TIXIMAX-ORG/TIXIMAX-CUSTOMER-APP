@@ -1,3 +1,14 @@
+import { ENV_CONFIG } from '@/src/shared/constants/env.constants';
+
+// Chuẩn hóa URL ảnh: giữ nguyên URL tuyệt đối/scheme, thêm https cho "//", còn lại ghép apiBaseUrl.
+export const resolveImageUrl = (value?: string | null): string | null => {
+  const url = value?.trim();
+  if (!url) return null;
+  if (/^[a-z][a-z\d+\-.]*:/i.test(url)) return url;
+  if (url.startsWith('//')) return `https:${url}`;
+  return `${ENV_CONFIG.apiBaseUrl.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
+};
+
 export const formatCurrency = (value: number | string | null | undefined): string => {
   const num = typeof value === 'string' ? parseFloat(value) : (value ?? 0);
   if (!Number.isFinite(num)) return '0 ₫';
